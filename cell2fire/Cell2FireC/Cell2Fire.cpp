@@ -171,9 +171,9 @@ Cell2Fire::Cell2Fire(arguments _args) : CSVWeather(_args.InFolder + "Weather.csv
 	
 	// Populate DF 
 	std::vector<std::vector<std::string>> DF = CSVParser.getData();
-	std::cout << "Forest DataFrame from instance " << filename << std::endl;
+	// std::cout << "Forest DataFrame from instance " << filename << std::endl;
 	//DEBUGCSVParser.printData(DF);
-	std::cout << "Number of cells: " <<  this->nCells  << std::endl;
+	// std::cout << "Number of cells: " <<  this->nCells  << std::endl;
 	
 	// Create empty df with size of NCells
 	df_ptr = & df[0];
@@ -243,7 +243,7 @@ Cell2Fire::Cell2Fire(arguments _args) : CSVWeather(_args.InFolder + "Weather.csv
 	
 	/* Weather DataFrame */
 	this->WeatherDF = this->CSVWeather.getData();
-	std::cout << "\nWeather DataFrame from instance " << this->CSVWeather.fileName << std::endl;
+	// std::cout << "\nWeather DataFrame from instance " << this->CSVWeather.fileName << std::endl;
 	
 	// Populate WDF 
 	int WPeriods = WeatherDF.size() - 1;  // -1 due to header
@@ -641,7 +641,7 @@ bool Cell2Fire::RunIgnition(std::default_random_engine generator, int rnumber3){
             temp = this->IgnitionSets[this->year - 1][udistribution(generator)];          
 		}
 		
-		std::cout << "\nSelected ignition point for Year " << this->year <<  ", sim " <<  this->sim << ": "<< temp;
+		// std::cout << "\nSelected ignition point for Year " << this->year <<  ", sim " <<  this->sim << ": "<< temp;
 	
 		// If cell is available 
 		if (this->burntCells.find(temp) == this->burntCells.end() && this->statusCells[temp - 1] < 3) {
@@ -1223,14 +1223,14 @@ void Cell2Fire::Step(std::default_random_engine generator, int rnumber, double r
 	
 	// Conditions entering the step
 
-	std::cout << "********************************************" << std::endl;
-	std::cout << "Year: " << this->year << std::endl;
-	std::cout << "Total years:" <<  this->args.TotalYears << std::endl;
-	std::cout << "Fire Period: " <<  this->fire_period[this->year-1]  << std::endl;
-	std::cout << "WeatherPeriod: " <<  this->weatherPeriod << std::endl;
-	std::cout << "MaxFirePeriods: " <<  this->args.MaxFirePeriods << std::endl;
-	//printSets(this->availCells, this->nonBurnableCells, this->burningCells, this->burntCells, this->harvestCells);
-	std::cout << "********************************************" << std::endl;
+	// std::cout << "********************************************" << std::endl;
+	// std::cout << "Year: " << this->year << std::endl;
+	// std::cout << "Total years:" <<  this->args.TotalYears << std::endl;
+	// std::cout << "Fire Period: " <<  this->fire_period[this->year-1]  << std::endl;
+	// std::cout << "WeatherPeriod: " <<  this->weatherPeriod << std::endl;
+	// std::cout << "MaxFirePeriods: " <<  this->args.MaxFirePeriods << std::endl;
+	// //printSets(this->availCells, this->nonBurnableCells, this->burningCells, this->burntCells, this->harvestCells);
+	// std::cout << "********************************************" << std::endl;
 
 	
 	 // One step (one fire period, ignition - if needed -, sending messages and receiving them - if needed)
@@ -1394,7 +1394,7 @@ std::vector<float> Cell2Fire::getFireProgressMatrix(){
 *******************************************************************************/
 int main(int argc, char * argv[]){
 	// Read Arguments
-	std::cout << "------ Command line values ------\n";
+	// std::cout << "------ Command line values ------\n";
 	arguments args;
 	arguments * args_ptr = &args;
 	parseArgs(argc, argv, args_ptr);
@@ -1460,14 +1460,14 @@ int main(int argc, char * argv[]){
 
 			// While instead of for to have explicit breaking condition
 			while (tstep <= Forest.args.MaxFirePeriods * Forest.args.TotalYears - 1 && stop == 0){   
-				printf("\n ---- tstep %d \n", tstep);
+				// printf("\n ---- tstep %d \n", tstep);
 				std::string action;
 				std::cout << "Input action" << std::endl;
 				std::cin >> action;
 				std::cout << "Taking action: " << action << std::endl;
 
 				Forest.Step(generator, rnumber, rnumber2, rnumber3);
-				printf("\nDone: %d", Forest.done);
+				// printf("\nDone: %d", Forest.done);
 				
 				if (Forest.done){
 					//DEBUGprintf("\n Done = True!, break \n");
