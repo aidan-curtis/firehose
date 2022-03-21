@@ -7,12 +7,13 @@ import pandas as pd
 import cv2
 import sys
 import time
+from cell2fire.utils.ReadDataPrometheus import Dictionary
 
 
 ENVS = []
 
 class FireEnv(Env):
-    def __init__(self, map="Sub40x40", max_steps=500):
+    def __init__(self, map="dogrib", max_steps=500, ignition_point=(0, 0), ignition_radius=0):
         # TODO: Create the process with the input map
         self.action_space = Discrete(3)
         self.observation_space = Box(low=np.array([0]), high=np.array([100]))
@@ -20,9 +21,27 @@ class FireEnv(Env):
         self.base_path =  os.path.dirname(os.path.realpath(__file__))
         self.binary = "{}/Cell2FireC/Cell2Fire".format(self.base_path)
         self.data_folder = "{}/../data/{}/".format(self.base_path, map)
+        self.forest_datafile = "{}/../data/{}/Forest.asc".format(self.base_path, map)
         self.output_folder = "{}/../results/{}/".format(self.base_path, map)
         self.fire_process = None
         self.MAX_STEPS = max_steps
+        self.forest_image_data = np.loadtxt(self.forest_datafile, skiprows=6)
+
+        self.load_forest_image()
+
+        # TODO: pass these into the binary
+        self.ignition_point = ignition_point
+        self.ignition_radius = ignition_radius
+
+    def load_forest_image(self):
+        # Load in the forest image through the color lookup dict
+        fb_lookup = os.path.join(self.data_folder, "fbp_lookup_table.csv")
+        self.fb_dict = Dictionary(fb_lookup)[1]        
+        self.fb_dict['-9999'] = [0,0,0]  
+        self.forest_image = np.zeros( (self.forest_image_data.shape[0], self.forest_image_data.shape[1], 3) )
+        for x in range(self.forest_image_data.shape[0]):
+            for y in range(self.forest_image_data.shape[1]):
+                self.forest_image[x, y] = self.fb_dict[str(int(self.forest_image_data[x, y]))][:3]
 
     def step(self, action):
         result = ""
@@ -46,6 +65,8 @@ class FireEnv(Env):
         np.set_printoptions(threshold=sys.maxsize)
         print("State: "+str(self.state))
 
+        print(self.state.shape)
+
         done = self.iter >= self.MAX_STEPS
         info = {}
         reward = 0
@@ -54,8 +75,15 @@ class FireEnv(Env):
         return self.state, reward, done, info
 
     def render(self):
-        im = (self.state*255).astype('uint8')
-        cv2.imshow("Game", im)
+        im = (self.forest_image*255).astype('uint8')
+
+        # Set fire cells
+        idxs = np.where(self.state>0)
+        im[idxs] = [0,0,255]
+
+        # Scale to be larger
+        im = cv2.resize(im, (im.shape[1]*2, im.shape[0]*2), interpolation = cv2.INTER_AREA)
+        cv2.imshow("Fire", im)
         cv2.waitKey(10)
     
 
