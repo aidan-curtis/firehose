@@ -13,7 +13,7 @@ from cell2fire.utils.ReadDataPrometheus import Dictionary
 ENVS = []
 
 class FireEnv(Env):
-    def __init__(self, map="dogrib", max_steps=500, ignition_point=(0, 0), ignition_radius=0):
+    def __init__(self, map="dogrib", max_steps=200, ignition_point=(0, 0), ignition_radius=0):
         # TODO: Create the process with the input map
         self.action_space = Discrete(3)
         self.observation_space = Box(low=np.array([0]), high=np.array([100]))
@@ -48,24 +48,16 @@ class FireEnv(Env):
         q = 0
         while(result != "Input action"):
             result = self.fire_process.stdout.readline().strip().decode("utf-8") 
-            print(result)
             # assert len(result)>0
         value = str(action) + '\n'
         value = bytes(value, 'UTF-8')
         self.fire_process.stdin.write(value)
         self.fire_process.stdin.flush()
 
-
-
         state_file = self.fire_process.stdout.readline().strip().decode("utf-8")
         time.sleep(0.01)
         df = pd.read_csv(state_file, sep=',',header=None)
         self.state = df.values
-        print(self.state)
-        np.set_printoptions(threshold=sys.maxsize)
-        print("State: "+str(self.state))
-
-        print(self.state.shape)
 
         done = self.iter >= self.MAX_STEPS
         info = {}
@@ -82,7 +74,7 @@ class FireEnv(Env):
         im[idxs] = [0,0,255]
 
         # Scale to be larger
-        im = cv2.resize(im, (im.shape[1]*2, im.shape[0]*2), interpolation = cv2.INTER_AREA)
+        im = cv2.resize(im, (im.shape[1]*4, im.shape[0]*4), interpolation = cv2.INTER_AREA)
         cv2.imshow("Fire", im)
         cv2.waitKey(10)
     
@@ -107,6 +99,5 @@ if(__name__ == "__main__"):
         state, reward, done, info = env.step(action)
         env.render()
         if(done):
-            print("DONE!")
             state = env.reset()
     print("Finished!")

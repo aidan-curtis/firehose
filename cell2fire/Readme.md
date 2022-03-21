@@ -30,3 +30,12 @@ Important: provide the number of sims --nsims to be processed
 ```
 $ python main.py --input-instance-folder /mnt/c/Users/Lenovo/documents/GitHub/Cell2Fire/data/9cells/ --output-folder /mnt/c/Users/Lenovo/Desktop/9cells --nsims 10 --stats --allPlots --onlyProcessing
 ```
+
+
+# TODO
+
+- design realistic action space
+- implement action space
+- randomize ignition point
+- randomize weather
+- train rl agents
