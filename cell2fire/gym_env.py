@@ -2,34 +2,35 @@ from gym import Env
 from gym.spaces import Discrete, Box
 import numpy as np
 import subprocess
+import os
 
 class FireEnv(Env):
-    def __init__(self):
+    def __init__(self, environment="dogrib", max_steps=50):
         # TODO: Create the process with the input map
         self.action_space = Discrete(3)
         self.observation_space = Box(low=np.array([0]), high=np.array([100]))
         self.state = [0]
-        self.binary = "/Users/aidancurtis/Cell2Fire/cell2fire/Cell2FireC/Cell2Fire"
-        self.data_folder = "../data/dogrib/"
-        self.output_folder = "../results/dogrib_n100cv05"
+        self.base_path =  os.path.dirname(os.path.realpath(__file__))
+        self.binary = "{}/Cell2FireC/Cell2Fire".format(self.base_path)
+        self.data_folder = "{}/../data/{}/".format(self.base_path, environment)
+        self.output_folder = "{}/../results/{}/".format(self.base_path, environment)
         self.fire_process = None
-        self.MAX_STEPS = 50
-
-
+        self.MAX_STEPS = max_steps
 
     def step(self, action):
         result = ""
-        print("waiting for input cue")
+        q = 0
         while(result != "Input action"):
             result = self.fire_process.stdout.readline().strip().decode("utf-8") 
             print(result)
-            print(self.iter)
-
+            # assert len(result)>0
         value = str(action) + '\n'
         value = bytes(value, 'UTF-8')
         self.fire_process.stdin.write(value)
         self.fire_process.stdin.flush()
 
+        state = self.fire_process.stdout.readline().strip().decode("utf-8") 
+        print("State: "+str(state))
 
         done = self.iter >= self.MAX_STEPS
         info = {}
@@ -45,10 +46,7 @@ class FireEnv(Env):
         self.iter=0
 
         if(self.fire_process is not None):
-            print("Killing")
             self.fire_process.kill()
-
-
 
         command_string = "{} --input-instance-folder {} --output-folder {} --ignitions --sim-years 1 --nsims 1 --grids --final-grid --Fire-Period-Length 1.0 --output-messages --weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad 0 --seed 123 --nthreads 1 --ROS-Threshold 0.1 --HFI-Threshold 0.1  --HarvestPlan".format(self.binary, self.data_folder, self.output_folder)
         command_string_args = command_string.split(" ")

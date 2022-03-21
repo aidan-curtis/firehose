@@ -1188,6 +1188,8 @@ void Cell2Fire::outputGrid(){
 	if(this->args.verbose){
 		std::cout  << "We are plotting the current forest to a csv file " << gridName << std::endl;
 	}
+
+	std::cout << gridName << std::endl;
 	
 	CSVWriter CSVPloter(gridName, ",");
 	CSVPloter.printCSV_V2(this->rows, this->cols, statusCells2);
@@ -1464,7 +1466,6 @@ int main(int argc, char * argv[]){
 				std::string action;
 				std::cout << "Input action" << std::endl;
 				std::cin >> action;
-				std::cout << "Taking action: " << action << std::endl;
 
 				Forest.Step(generator, rnumber, rnumber2, rnumber3);
 				// printf("\nDone: %d", Forest.done);
