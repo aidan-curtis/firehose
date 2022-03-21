@@ -5,12 +5,10 @@ We are trying to put out big fires
 
 # Run the env
 ```
-cd cell2fire
-python gym_env.py
+python cell2fire/gym_env.py
 ```
 
 # Train a PPO agent
 ```
-cd cell2fire
-python rl_experiment.py
+python cell2fire/rl_experiment.py
 ```
