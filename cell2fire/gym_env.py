@@ -1,6 +1,6 @@
 import os
-import subprocess
 import time
+from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -8,56 +8,38 @@ import pandas as pd
 from gym import Env
 from gym.spaces import Discrete, Box
 
-from cell2fire.utils.ReadDataPrometheus import Dictionary
+from firehose.models import IgnitionPoint, ExperimentHelper
+from firehose.process import Cell2FireProcess
 
 ENVS = []
-_COMMAND_STR = "{} --input-instance-folder {} --output-folder {} --ignitions --sim-years 1 \
-    --nsims 1 --grids --final-grid --Fire-Period-Length 1.0 --output-messages \
-    --weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad 0 --seed 123 --nthreads 1 \
-    --ROS-Threshold 0.1 --HFI-Threshold 0.1  --HarvestPlan"
+_MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 class FireEnv(Env):
     def __init__(
-        self, map="dogrib", max_steps=200, ignition_point=(0, 0), ignition_radius=0
+        self,
+        fire_map: str = "dogrib",
+        max_steps: int = 200,
+        ignition_points: Optional[List[IgnitionPoint]] = None,
     ):
+        if not ignition_points:
+            ignition_points = [IgnitionPoint()]
         # TODO: Create the process with the input map
         self.action_space = Discrete(3)
         self.observation_space = Box(low=np.array([0]), high=np.array([100]))
+        self.iter = 0
         self.state = [0]
-
-        # Set paths of all the things
-        self.base_path = os.path.dirname(os.path.realpath(__file__))
-        self.binary = "{}/Cell2FireC/Cell2Fire".format(self.base_path)
-        self.data_folder = "{}/../data/{}/".format(self.base_path, map)
-        self.forest_datafile = "{}/../data/{}/Forest.asc".format(self.base_path, map)
-        self.output_folder = "{}/../results/{}/".format(self.base_path, map)
-
-        # TODO: detect if process throws an error?
-        self.fire_process = None
-
         self.max_steps = max_steps
-        self.forest_image_data = np.loadtxt(self.forest_datafile, skiprows=6)
 
-        self.load_forest_image()
+        # Helper code
+        self.helper = ExperimentHelper(base_dir=_MODULE_DIR, map=fire_map)
+        self.forest_image = self.helper.load_forest_image()
+
+        # Cell2Fire Process
+        self.fire_process = Cell2FireProcess(self.helper)
 
         # TODO: pass these into the binary
-        self.ignition_point = ignition_point
-        self.ignition_radius = ignition_radius
-
-    def load_forest_image(self):
-        # Load in the forest image through the color lookup dict
-        fb_lookup = os.path.join(self.data_folder, "fbp_lookup_table.csv")
-        self.fb_dict = Dictionary(fb_lookup)[1]
-        self.fb_dict["-9999"] = [0, 0, 0]
-        self.forest_image = np.zeros(
-            (self.forest_image_data.shape[0], self.forest_image_data.shape[1], 3)
-        )
-        for x in range(self.forest_image_data.shape[0]):
-            for y in range(self.forest_image_data.shape[1]):
-                self.forest_image[x, y] = self.fb_dict[
-                    str(int(self.forest_image_data[x, y]))
-                ][:3]
+        self.ignition_points = ignition_points
 
     def step(self, action, debug: bool = True):
         # if debug:
@@ -66,15 +48,15 @@ class FireEnv(Env):
         result = ""
         q = 0
         while result != "Input action":
-            result = self.fire_process.stdout.readline().strip().decode("utf-8")
+            result = self.fire_process.read_line()
             # print(result)
             # assert len(result)>0
+
         value = str(action) + "\n"
         value = bytes(value, "UTF-8")
-        self.fire_process.stdin.write(value)
-        self.fire_process.stdin.flush()
+        self.fire_process.write_action(value)
 
-        state_file = self.fire_process.stdout.readline().strip().decode("utf-8")
+        state_file = self.fire_process.read_line()
         # FIXME: is this necessary?
         time.sleep(0.01)
         df = pd.read_csv(state_file, sep=",", header=None)
@@ -88,6 +70,7 @@ class FireEnv(Env):
         return self.state, reward, done, info
 
     def render(self, **kwargs):
+        """Render the geographic image and fire"""
         im = (self.forest_image * 255).astype("uint8")
 
         # Set fire cells
@@ -102,27 +85,16 @@ class FireEnv(Env):
         cv2.waitKey(10)
 
     def reset(self, **kwargs):
+        """Reset environment and restart process"""
         self.iter = 0
-
-        if self.fire_process is not None:
-            self.fire_process.kill()
-
-        command_string = _COMMAND_STR.format(
-            self.binary, self.data_folder, self.output_folder
-        )
-        command_string_args = command_string.split(" ")
-        self.fire_process = subprocess.Popen(
-            command_string_args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            stdin=subprocess.PIPE,
-        )
         self.state = [0]
+        # Kill and respawn Cell2Fire process
+        self.fire_process.reset()
         return self.state
 
 
-def main():
-    env = FireEnv()
+def main(**env_kwargs):
+    env = FireEnv(**env_kwargs)
     state = env.reset()
     for _ in range(500):
         action = env.action_space.sample()
