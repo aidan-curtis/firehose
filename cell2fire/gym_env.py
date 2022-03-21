@@ -3,17 +3,24 @@ from gym.spaces import Discrete, Box
 import numpy as np
 import subprocess
 import os
+import pandas as pd
+import cv2
+import sys
+import time
+
+
+ENVS = []
 
 class FireEnv(Env):
-    def __init__(self, environment="dogrib", max_steps=50):
+    def __init__(self, map="Sub40x40", max_steps=500):
         # TODO: Create the process with the input map
         self.action_space = Discrete(3)
         self.observation_space = Box(low=np.array([0]), high=np.array([100]))
         self.state = [0]
         self.base_path =  os.path.dirname(os.path.realpath(__file__))
         self.binary = "{}/Cell2FireC/Cell2Fire".format(self.base_path)
-        self.data_folder = "{}/../data/{}/".format(self.base_path, environment)
-        self.output_folder = "{}/../results/{}/".format(self.base_path, environment)
+        self.data_folder = "{}/../data/{}/".format(self.base_path, map)
+        self.output_folder = "{}/../results/{}/".format(self.base_path, map)
         self.fire_process = None
         self.MAX_STEPS = max_steps
 
@@ -29,8 +36,15 @@ class FireEnv(Env):
         self.fire_process.stdin.write(value)
         self.fire_process.stdin.flush()
 
-        state = self.fire_process.stdout.readline().strip().decode("utf-8") 
-        print("State: "+str(state))
+
+
+        state_file = self.fire_process.stdout.readline().strip().decode("utf-8")
+        time.sleep(0.01)
+        df = pd.read_csv(state_file, sep=',',header=None)
+        self.state = df.values
+        print(self.state)
+        np.set_printoptions(threshold=sys.maxsize)
+        print("State: "+str(self.state))
 
         done = self.iter >= self.MAX_STEPS
         info = {}
@@ -40,7 +54,10 @@ class FireEnv(Env):
         return self.state, reward, done, info
 
     def render(self):
-        pass
+        im = (self.state*255).astype('uint8')
+        cv2.imshow("Game", im)
+        cv2.waitKey(10)
+    
 
     def reset(self):
         self.iter=0
@@ -57,9 +74,10 @@ class FireEnv(Env):
 if(__name__ == "__main__"):
     env = FireEnv()
     state = env.reset()
-    for _ in range(120):
+    for _ in range(500):
         action = env.action_space.sample()
         state, reward, done, info = env.step(action)
+        env.render()
         if(done):
             print("DONE!")
             state = env.reset()

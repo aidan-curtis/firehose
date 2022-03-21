@@ -19,4 +19,8 @@ data/Sub20x20/Weathers/.DS_Store
 *.swp
 *.swo
 results/
+
 .DS_STORE
+._.DS_Store
+**/.DS_Store
+**/._.DS_Store
