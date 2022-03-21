@@ -1,0 +1,8 @@
+LICENSE
+README.md
+setup.py
+Cell2Fire.egg-info/PKG-INFO
+Cell2Fire.egg-info/SOURCES.txt
+Cell2Fire.egg-info/dependency_links.txt
+Cell2Fire.egg-info/requires.txt
+Cell2Fire.egg-info/top_level.txt
