@@ -1387,6 +1387,17 @@ std::vector<float> Cell2Fire::getFireProgressMatrix(){
 
 
 
+std::vector<int> split(const std::string &s, char delim) {
+    std::vector<int> elems;
+    std::stringstream ss(s);
+    std::string number;
+    while(std::getline(ss, number, delim)) {
+        elems.push_back(std::stoi(number));
+    }
+    return elems;
+}
+
+
 
 
 /******************************************************************************
@@ -1466,6 +1477,12 @@ int main(int argc, char * argv[]){
 				std::string action;
 				std::cout << "Input action" << std::endl;
 				std::cin >> action;
+				// Parse the actions into non-burnable cells
+				std::vector<int> numbers = split(action, ' ');
+
+				for (int i=0; i<numbers.size(); i++){
+					Forest.nonBurnableCells.insert(numbers[i]);
+				}
 
 				Forest.Step(generator, rnumber, rnumber2, rnumber3);
 				// printf("\nDone: %d", Forest.done);

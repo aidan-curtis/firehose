@@ -5,7 +5,7 @@ from typing import List, Optional
 import cv2
 import numpy as np
 import pandas as pd
-from gym import Env
+from gym import Env, spaces
 from gym.spaces import Discrete, Box
 
 from firehose.models import IgnitionPoint, ExperimentHelper
@@ -14,19 +14,21 @@ from firehose.process import Cell2FireProcess
 ENVS = []
 _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 
+def fire_size_reward(state, forest, scale=10):
+    idxs = np.where(state > 0)
+    return -len(idxs[0])/(forest.shape[0]*forest.shape[1])*scale
 
 class FireEnv(Env):
     def __init__(
         self,
-        fire_map: str = "dogrib",
+        fire_map: str = "Sub20x20",
         max_steps: int = 200,
         ignition_points: Optional[List[IgnitionPoint]] = None,
+        reward_func = fire_size_reward
     ):
         if not ignition_points:
             ignition_points = [IgnitionPoint()]
         # TODO: Create the process with the input map
-        self.action_space = Discrete(3)
-        self.observation_space = Box(low=np.array([0]), high=np.array([100]))
         self.iter = 0
         self.state = [0]
         self.max_steps = max_steps
@@ -35,11 +37,18 @@ class FireEnv(Env):
         self.helper = ExperimentHelper(base_dir=_MODULE_DIR, map=fire_map)
         self.forest_image = self.helper.load_forest_image()
 
+        self.action_space = Discrete(self.forest_image.shape[0]*self.forest_image.shape[1])
+        self.observation_space = spaces.Box(low=0, high=255,
+                                        shape=(self.forest_image.shape[0], self.forest_image.shape[1]), dtype=np.uint8)
+
         # Cell2Fire Process
         self.fire_process = Cell2FireProcess(self.helper)
 
         # TODO: pass these into the binary
         self.ignition_points = ignition_points
+
+        # Reward function
+        self.reward_func = reward_func
 
     def step(self, action, debug: bool = True):
         # if debug:
@@ -58,16 +67,14 @@ class FireEnv(Env):
 
         state_file = self.fire_process.read_line()
         # FIXME: is this necessary?
-        time.sleep(0.01)
+        time.sleep(0.02)
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
 
         done = self.iter >= self.max_steps
-        info = {}
-        reward = 0
         self.iter += 1
 
-        return self.state, reward, done, info
+        return self.state, self.reward_func(self.state, self.forest_image), done, {}
 
     def render(self, **kwargs):
         """Render the geographic image and fire"""
