@@ -1481,7 +1481,7 @@ int main(int argc, char * argv[]){
 				std::vector<int> numbers = split(action, ' ');
 
 				for (int i=0; i<numbers.size(); i++){
-					Forest.nonBurnableCells.insert(numbers[i]);
+					Forest.harvestCells.insert(numbers[i]);
 				}
 
 				Forest.Step(generator, rnumber, rnumber2, rnumber3);

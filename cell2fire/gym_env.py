@@ -30,7 +30,6 @@ class FireEnv(Env):
             ignition_points = [IgnitionPoint()]
         # TODO: Create the process with the input map
         self.iter = 0
-        self.state = [0]
         self.max_steps = max_steps
 
         # Helper code
@@ -40,7 +39,7 @@ class FireEnv(Env):
         self.action_space = Discrete(self.forest_image.shape[0]*self.forest_image.shape[1])
         self.observation_space = spaces.Box(low=0, high=255,
                                         shape=(self.forest_image.shape[0], self.forest_image.shape[1]), dtype=np.uint8)
-
+        self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1]))
         # Cell2Fire Process
         self.fire_process = Cell2FireProcess(self.helper)
 
@@ -61,13 +60,13 @@ class FireEnv(Env):
             # print(result)
             # assert len(result)>0
 
-        value = str(action) + "\n"
+        value = str(action+1) + "\n"
         value = bytes(value, "UTF-8")
         self.fire_process.write_action(value)
 
         state_file = self.fire_process.read_line()
         # FIXME: is this necessary?
-        time.sleep(0.02)
+        time.sleep(0.005)
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
 
@@ -76,7 +75,7 @@ class FireEnv(Env):
 
         return self.state, self.reward_func(self.state, self.forest_image), done, {}
 
-    def render(self, **kwargs):
+    def render(self, mode="human", **kwargs):
         """Render the geographic image and fire"""
         im = (self.forest_image * 255).astype("uint8")
 
@@ -94,7 +93,7 @@ class FireEnv(Env):
     def reset(self, **kwargs):
         """Reset environment and restart process"""
         self.iter = 0
-        self.state = [0]
+        self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1]))
         # Kill and respawn Cell2Fire process
         self.fire_process.reset()
         return self.state

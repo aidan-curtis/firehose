@@ -23,7 +23,6 @@ class Cell2FireProcess:
         self.process = subprocess.Popen(
             self._command_str_args,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
             stdin=subprocess.PIPE,
         )
 
