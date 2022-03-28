@@ -203,6 +203,7 @@ Cell2Fire::Cell2Fire(arguments _args) : CSVWeather(_args.InFolder + "Weather.csv
 	}
 	
 	// Harvested cells
+	// FIXME: WTF does this do?
 	if(strcmp(this->args.HarvestPlan.c_str(), EM) != 0){
 		std::string sep = ",";
 		CSVReader CSVHPlan(this->args.HarvestPlan, sep);
