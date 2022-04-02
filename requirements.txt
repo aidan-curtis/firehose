@@ -6,3 +6,7 @@ opencv-python
 imread
 tqdm
 deap
+
+# Additional dependencies for our RL stuff
+gym
+stable-baselines3

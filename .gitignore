@@ -28,3 +28,5 @@ results/
 .idea/
 .env/
 tmp/
+
+cmake-build-debug/

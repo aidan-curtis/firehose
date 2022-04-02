@@ -115,6 +115,7 @@ class FireEnv(Env):
 
 
 def main(**env_kwargs):
+    # TODO(willshen): allow environment to be parallelized
     env = FireEnv(**env_kwargs)
     state = env.reset()
     for _ in range(500):
