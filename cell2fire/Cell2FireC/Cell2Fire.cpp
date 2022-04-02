@@ -1446,7 +1446,10 @@ int main(int argc, char * argv[]){
         // Initialize Instance
 		Cell2Fire Forest(args);
 
-		// Random ignition 
+		// Random ignition
+        // FIXME: willshen@, wait shouldn't this be taking ignition point?
+        //  I guess it may be done in the main Cell2Fire initializing method
+        // TODO: figure out if we can have multiple ignition points in 1 year (future)
 		std::uniform_int_distribution<int> udistributionIgnition(1, Forest.nCells);		// Get random ignition point
 				
 		// Steps and stop
@@ -1478,16 +1481,23 @@ int main(int argc, char * argv[]){
 				std::string action;
 				std::cout << "Input action" << std::endl;
 				std::cin >> action;
-				// Parse the actions into non-burnable cells
+
+                // Note: action space is just index of cells in the flattened 2D matrix.
+                //  we turn those cells into harvested which means they can not catch fire
+                //  and act as breaks to wildfire
+                // See: https://cell2fire.readthedocs.io/en/latest/rstfiles/HarvestedCells.html
+                // Parse the actions into non-burnable cell
 				std::vector<int> numbers = split(action, ' ');
 
 				for (int i=0; i<numbers.size(); i++){
 					Forest.harvestCells.insert(numbers[i]);
 				}
 
-				Forest.Step(generator, rnumber, rnumber2, rnumber3);
+                // TODO: willshen@ check these harvestCells are being used to step.
+                Forest.Step(generator, rnumber, rnumber2, rnumber3);
 				// printf("\nDone: %d", Forest.done);
-				
+
+                // TODO: willshen@ check weather is not run out or loop around it
 				if (Forest.done){
 					//DEBUGprintf("\n Done = True!, break \n");
 					stop = 1;
