@@ -1,7 +1,9 @@
 import os
-from dataclasses import dataclass
+import shutil
+from dataclasses import dataclass, field
+from datetime import datetime
 from functools import cached_property
-from typing import NamedTuple, List, ClassVar
+from typing import NamedTuple, List, ClassVar, Optional
 
 import numpy as np
 from utils.ReadDataPrometheus import Dictionary
@@ -44,6 +46,10 @@ class ExperimentHelper:
     base_dir: str
     map: str
 
+    datetime_str: str = field(
+        default_factory=lambda: datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    )
+
     @property
     def binary_path(self) -> str:
         return os.path.join(self.base_dir, "Cell2FireC/Cell2Fire")
@@ -58,7 +64,11 @@ class ExperimentHelper:
 
     @property
     def output_folder(self) -> str:
-        return "{}/../results/{}/".format(self.base_dir, self.map)
+        return "{}/../results/{}_{}/".format(self.base_dir, self.map, self.datetime_str)
+
+    @property
+    def tmp_input_folder(self):
+        return "{}/../input/{}_{}/".format(self.base_dir, self.map, self.datetime_str)
 
     @cached_property
     def forest_image(self) -> np.ndarray:
@@ -79,6 +89,24 @@ class ExperimentHelper:
                 forest_image[x, y] = fb_dict[str(int(forest_image_data[x, y]))][:3]
 
         return forest_image
+
+    def manipulate_input_data_folder(
+        self, ignition_points: Optional[IgnitionPoints] = None
+    ):
+        """
+        Copy input data folder to somewhere new and write the ignition points we generated
+        """
+        # Copy input data folder to new one we generate
+        tmp_dir = self.tmp_input_folder
+        shutil.copytree(self.data_folder, tmp_dir)
+
+        # Delete existing ignition points and write our ignition points
+        if ignition_points:
+            ignition_points_csv = os.path.join(tmp_dir, IgnitionPoints.CSV_NAME)
+            os.remove(ignition_points_csv)
+            ignition_points.write_to_csv(ignition_points_csv)
+
+        print(f"Copied modified input data folder to {tmp_dir}")
 
     def generate_random_ignition_points(
         self, num_points: int = 1, year: int = 1, radius: int = IgnitionPoints.RADIUS

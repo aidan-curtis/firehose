@@ -28,5 +28,9 @@ results/
 .idea/
 .env/
 tmp/
+input/
 
 cmake-build-debug/
+firehose-results/
+
+__pycache__

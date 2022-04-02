@@ -118,12 +118,13 @@ def main(**env_kwargs):
     # TODO(willshen): allow environment to be parallelized
     env = FireEnv(**env_kwargs)
     state = env.reset()
-    for _ in range(500):
+    done = False
+    while not done:
         action = env.action_space.sample()
         state, reward, done, info = env.step(action)
         env.render()
-        if done:
-            state = env.reset()
+        # if done:
+        #     state = env.reset()
     print("Finished!")
 
 
