@@ -1,7 +1,4 @@
-import os
-import shutil
 import subprocess
-from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 
 from firehose.models import IgnitionPoints
@@ -11,9 +8,9 @@ if TYPE_CHECKING:
     from gym_env import FireEnv
 
 _COMMAND_STR = "{binary} --input-instance-folder {input} --output-folder {output} --ignitions --sim-years {sim_years} \
-    --nsims 1 --grids --final-grid --Fire-Period-Length 1.0 --output-messages \
-    --weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad {ignition_radius} --seed 123 --nthreads 1 \
-    --ROS-Threshold 0.1 --HFI-Threshold 0.1  --HarvestPlan"
+--nsims 1 --grids --final-grid --Fire-Period-Length 1.0 --output-messages \
+--weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad {ignition_radius} --seed 123 --nthreads 1 \
+--ROS-Threshold 0.1 --HFI-Threshold 0.1  --HarvestPlan"
 
 
 class Cell2FireProcess:
@@ -35,9 +32,7 @@ class Cell2FireProcess:
         self.process: Optional[subprocess.Popen] = None
 
     def spawn(self):
-        print(
-            "Spawning cell2fire process with command:", self._command_str
-        )
+        print("Spawning cell2fire process with command:", self._command_str)
         self.process = subprocess.Popen(
             self._command_str_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
         )

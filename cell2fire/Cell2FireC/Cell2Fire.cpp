@@ -1384,10 +1384,6 @@ std::vector<float> Cell2Fire::getFireProgressMatrix(){
 }
 
 
-
-
-
-
 std::vector<int> split(const std::string &s, char delim) {
     std::vector<int> elems;
     std::stringstream ss(s);
@@ -1397,8 +1393,6 @@ std::vector<int> split(const std::string &s, char delim) {
     }
     return elems;
 }
-
-
 
 
 /******************************************************************************
@@ -1453,9 +1447,13 @@ int main(int argc, char * argv[]){
 		std::uniform_int_distribution<int> udistributionIgnition(1, Forest.nCells);		// Get random ignition point
 				
 		// Steps and stop
-		int ep = 0;
-		int tstep = 0;
-		int stop = 0;
+		int ep = 0;  // number of episodes
+		int tstep = 0;  // time steps within an episode
+		int stop = 0;  // boolean flag indicating whether to stop
+
+        // Whether to accept input actions - only for debugging, set to `true` for our training
+        // Set to false for OG Cell2Fire
+        bool input_actions = true;
 
 		// Parallel loop across threads
 		#pragma omp for 
@@ -1478,20 +1476,29 @@ int main(int argc, char * argv[]){
 			// While instead of for to have explicit breaking condition
 			while (tstep <= Forest.args.MaxFirePeriods * Forest.args.TotalYears - 1 && stop == 0){   
 				// printf("\n ---- tstep %d \n", tstep);
-				std::string action;
-				std::cout << "Input action" << std::endl;
-				std::cin >> action;
+                if (input_actions) {
+                    std::string action;
+                    std::cout << "Input action" << std::endl;
+                    std::cin >> action;
 
-                // Note: action space is just index of cells in the flattened 2D matrix.
-                //  we turn those cells into harvested which means they can not catch fire
-                //  and act as breaks to wildfire
-                // See: https://cell2fire.readthedocs.io/en/latest/rstfiles/HarvestedCells.html
-                // Parse the actions into non-burnable cell
-				std::vector<int> numbers = split(action, ' ');
+                    // Note: action space is just index of cells in the flattened 2D matrix.
+                    //  we turn those cells into harvested which means they can not catch fire
+                    //  and act as breaks to wildfire
+                    // See: https://cell2fire.readthedocs.io/en/latest/rstfiles/HarvestedCells.html
+                    // Parse the actions into non-burnable cell
+                    std::vector<int> numbers = split(action, ' ');
 
-				for (int i=0; i<numbers.size(); i++){
-					Forest.harvestCells.insert(numbers[i]);
-				}
+                    for (int i=0; i<numbers.size(); i++){
+                        Forest.harvestCells.insert(numbers[i]);
+                    }
+
+                    // willshen@ testing: note, file still spreads if we do this.
+                    if (false) {
+                        for (auto it = Forest.burningCells.begin(); it != Forest.burningCells.end(); ++it) {
+                            Forest.harvestCells.insert(*it);
+                        }
+                    }
+                }
 
                 // TODO: willshen@ check these harvestCells are being used to step.
                 Forest.Step(generator, rnumber, rnumber2, rnumber3);
@@ -1504,13 +1511,11 @@ int main(int argc, char * argv[]){
 				}
 
 				tstep = tstep + 1;
-			
 			}
 			// Enforces to satisfy the total number of simulations (if no ignition, find another cell until we obtain the TotalSim asked)
 			//if (Forest.sim > args.TotalSims){
 				// break;
 			// }
-			
 		}
 	}
 	

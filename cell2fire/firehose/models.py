@@ -3,9 +3,10 @@ import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property
-from typing import NamedTuple, List, ClassVar, Optional
+from typing import List, ClassVar, Optional
 
 import numpy as np
+
 from utils.ReadDataPrometheus import Dictionary
 
 
