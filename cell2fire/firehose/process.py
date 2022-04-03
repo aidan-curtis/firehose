@@ -31,6 +31,9 @@ class Cell2FireProcess:
         self._command_str_args = self._command_str.split(" ")
         self.process: Optional[subprocess.Popen] = None
 
+        # Simulation (i.e. process) is finished
+        self.finished: bool = False
+
     def spawn(self):
         print(f"Spawning cell2fire process with command:\n{self._command_str}")
         self.process = subprocess.Popen(
@@ -42,7 +45,21 @@ class Cell2FireProcess:
     def read_line(self) -> str:
         return self.process.stdout.readline().strip().decode("utf-8")
 
-    def apply_actions(self, actions: Union[int, List[int]]):
+    def progress_to_next_state(self, verbose: bool = False):
+        # Step the process until we reach an input action line
+        result = ""
+        while result != "Input action":
+            result = self.read_line()
+            if verbose:
+                print(result)
+
+            # Cell2Fire finished the simulation - break out of the loop
+            if "Total Harvested Cells" in result:
+                print("Cell2Fire finished the simulation")
+                self.finished = True
+                break
+
+    def apply_actions(self, actions: Union[int, List[int]], verbose: bool = False):
         if isinstance(actions, int):
             actions = [actions]
 
@@ -51,6 +68,9 @@ class Cell2FireProcess:
 
         # Input is a single line with indices of cells to harvest separated by spaces
         value = " ".join(cell2fire_actions) + "\n"
+        if verbose:
+            print(value, end="")
+
         value = bytes(value, "UTF-8")
         self.write_actions(value)
 
@@ -63,3 +83,4 @@ class Cell2FireProcess:
         if self.process:
             self.process.kill()
         self.spawn()
+        self.progress_to_next_state()

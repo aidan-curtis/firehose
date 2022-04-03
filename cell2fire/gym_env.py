@@ -80,27 +80,34 @@ class FireEnv(Env):
             print(f"=== Step {self.iter} ===")
             print(f"Action: {action}")
 
-        result = ""
-        while result != "Input action":
-            result = self.fire_process.read_line()
-            if debug:
-                print(result)
-
         # IMPORTANT! Actions must be indexed from 0. The Cell2FireProcess class will
         # handle the indexing when calling Cell2Fire
-        self.fire_process.apply_actions(action)
+        self.fire_process.apply_actions(action, debug)
 
         state_file = self.fire_process.read_line()
         # Hack: supposedly this allows time for the CSV to be written by the subprocess
         # in time...
         time.sleep(0.005)
 
+        if not state_file.endswith(".csv"):
+            raise RuntimeError(
+                f"Something went wrong. State file returned was {state_file}"
+            )
+
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
 
-        done = self.iter >= self.max_steps
-        self.iter += 1
+        # Progress fire process to next state
+        self.fire_process.progress_to_next_state(debug)
 
+        # Check if we've exceeded max steps or Cell2Fire finished simulating
+        done = self.iter >= self.max_steps or self.fire_process.finished
+        if not debug:
+            print(f"\rStep {self.iter}", end="")
+            if done:
+                print()
+
+        self.iter += 1
         return self.state, self.reward_func(self.state, self.forest_image), done, {}
 
     def render(self, mode="human", **kwargs):
@@ -146,7 +153,6 @@ def main(debug: bool, **env_kwargs):
         action = env.action_space.sample()
         state, reward, done, info = env.step(action, debug=debug)
         env.render()
-        time.sleep(0.1)
 
         # if done:
         #     state = env.reset()
@@ -156,4 +162,5 @@ def main(debug: bool, **env_kwargs):
 
 
 if __name__ == "__main__":
-    main(debug=False, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))
+    main(debug=False, max_steps=1000)
+    # main(debug=True, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))

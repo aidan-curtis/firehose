@@ -89,6 +89,7 @@ class ExperimentHelper:
     def forest_non_fuel(self) -> np.ndarray:
         """Array with 1 if non-fuel and 0 if fuel"""
         fuel_type_dict = self.fbp_lookup_dict[2]
+        fuel_type_dict["-9999"] = _NO_FUEL_STR
 
         forest_non_fuels = np.zeros_like(self.forest_data)
         for x in range(forest_non_fuels.shape[0]):
@@ -164,4 +165,5 @@ class ExperimentHelper:
                 for idx, point in enumerate(ignition_points)
             ]
         )
+        print("Sampled ignition points:", ignition_points)
         return ignition_points
