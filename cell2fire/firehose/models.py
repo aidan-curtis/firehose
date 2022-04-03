@@ -131,7 +131,9 @@ class ExperimentHelper:
         # Delete existing ignition points and write our ignition points
         if ignition_points:
             ignition_points_csv = os.path.join(tmp_dir, IgnitionPoints.CSV_NAME)
-            os.remove(ignition_points_csv)
+            # Only remove ignitions if it already exists
+            if os.path.exists(ignition_points_csv):
+                os.remove(ignition_points_csv)
             ignition_points.write_to_csv(ignition_points_csv)
 
         print(f"Copied modified input data folder to {tmp_dir}")
