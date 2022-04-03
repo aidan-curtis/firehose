@@ -2,7 +2,7 @@ EIGENDIR = /Users/admin/workspace/eigen-3.4.0/
 CC = g++
 MPCC = g++
 OPENMP = -openmp
-CFLAGS = -std=c++11 -O3 -I$(EIGENDIR)
+CFLAGS = -std=c++11 -O3 -I$(EIGENDIR) -g
 LIBS = -m64 -fPIC -fno-strict-aliasing -fexceptions -DNDEBUG -DIL_STD -lm -lpthread -ldl 
 
 TARGETS = Cell2Fire

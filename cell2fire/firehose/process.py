@@ -32,7 +32,7 @@ class Cell2FireProcess:
         self.process: Optional[subprocess.Popen] = None
 
     def spawn(self):
-        print("Spawning cell2fire process with command:", self._command_str)
+        print(f"Spawning cell2fire process with command:\n{self._command_str}")
         self.process = subprocess.Popen(
             self._command_str_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
         )

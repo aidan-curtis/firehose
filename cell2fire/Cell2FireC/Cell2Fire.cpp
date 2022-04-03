@@ -85,6 +85,8 @@ void printSets(std::unordered_set<int> availCells, std::unordered_set<int> nonBu
 // Output grids
 void CSVGrid(int rows, int cols, int gridNumber, std::string gridFolder, std::vector<int> & statusCellsCSV, bool verbose){
 	std::string gridName;
+
+	// TODO(willshen): write to separate CSV for parallel runs?
 	if (gridNumber < 10){
 			gridName = gridFolder+ "ForestGrid0" + std::to_string(gridNumber) + ".csv";
 	}
@@ -251,6 +253,7 @@ Cell2Fire::Cell2Fire(arguments _args) : CSVWeather(_args.InFolder + "Weather.csv
 	wdf_ptr = &wdf[0];
 	
 	// Populate the wdf objects
+	// TODO(willshen): loop around weather dataframe
 	this->CSVWeather.parseWeatherDF(wdf_ptr, this->WeatherDF, WPeriods);
 	//DEBUGthis->CSVWeather.printData(this->WeatherDF);
 	
@@ -1479,7 +1482,8 @@ int main(int argc, char * argv[]){
                 if (input_actions) {
                     std::string action;
                     std::cout << "Input action" << std::endl;
-                    std::cin >> action;
+                    // Need to use getline not just cin as the latter only reads up to first whitespace
+                    std::getline(std::cin, action);
 
                     // Note: action space is just index of cells in the flattened 2D matrix.
                     //  we turn those cells into harvested which means they can not catch fire
@@ -1490,6 +1494,9 @@ int main(int argc, char * argv[]){
 
                     for (int i=0; i<numbers.size(); i++){
                         Forest.harvestCells.insert(numbers[i]);
+                        Forest.nonBurnableCells.insert(numbers[i]);
+                        Forest.burningCells.erase(numbers[i]);
+                        Forest.availCells.erase(numbers[i]);
                     }
 
                     // willshen@ testing: note, file still spreads if we do this.
