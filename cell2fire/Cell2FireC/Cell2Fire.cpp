@@ -1193,8 +1193,9 @@ void Cell2Fire::outputGrid(){
 		std::cout  << "We are plotting the current forest to a csv file " << gridName << std::endl;
 	}
 
-	std::cout << gridName << std::endl;
-	
+    // IMPORTANT NOTE! DO NOT REMOVE. Our Python code relies on this to determine the output grid
+    std::cout << gridName << std::endl;
+
 	CSVWriter CSVPloter(gridName, ",");
 	CSVPloter.printCSV_V2(this->rows, this->cols, statusCells2);
 	this->gridNumber++;
@@ -1492,17 +1493,36 @@ int main(int argc, char * argv[]){
                     // Parse the actions into non-burnable cell
                     std::vector<int> numbers = split(action, ' ');
 
+                    // Note: indexing starts at 0 in arrays and stuff but is 1 in the printed representations
+                    // and CSVs and stuff (the latter is my assumption). This is why we see i+1 and i-1 in 
+                    // the code above when they initialize and reset things
                     for (int i=0; i<numbers.size(); i++){
+                        // Set cell fuel types
+                        Forest.fTypeCells[numbers[i]] = 0;
+                        Forest.fTypeCells2[numbers[i]] = "NonBurnable";
+                        Forest.statusCells[numbers[i]] = 3;
+
+                        // Insert/Remove everything to make life easier
                         Forest.harvestCells.insert(numbers[i]);
                         Forest.nonBurnableCells.insert(numbers[i]);
                         Forest.burningCells.erase(numbers[i]);
                         Forest.availCells.erase(numbers[i]);
                     }
 
-                    // willshen@ testing: note, file still spreads if we do this.
+                    // willshen@ testing: automatically clear all the cells on fire
                     if (false) {
                         for (auto it = Forest.burningCells.begin(); it != Forest.burningCells.end(); ++it) {
-                            Forest.harvestCells.insert(*it);
+                            int idx = *it;
+                            // Set cell fuel types
+                            Forest.fTypeCells[idx] = 0;
+                            Forest.fTypeCells2[idx] = "NonBurnable";
+                            Forest.statusCells[idx] = 3;
+    
+                            // Insert/Remove everything to make life easier
+                            Forest.harvestCells.insert(idx);
+                            Forest.nonBurnableCells.insert(idx);
+                            Forest.burningCells.erase(idx);
+                            Forest.availCells.erase(idx);
                         }
                     }
                 }

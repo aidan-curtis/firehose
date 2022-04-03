@@ -72,14 +72,27 @@ class ExperimentHelper:
         return "{}/../input/{}_{}/".format(self.base_dir, self.map, self.datetime_str)
 
     @cached_property
+    def forest_data(self) -> np.ndarray:
+        return np.loadtxt(self.forest_datafile, skiprows=6)
+
+    @cached_property
+    def fbp_lookup_dict(self) -> Dictionary:
+        # Load the lookup table
+        fbp_lookup = os.path.join(self.data_folder, "fbp_lookup_table.csv")
+        fbp_dict = Dictionary(fbp_lookup)
+        return fbp_dict
+
+    def forest_fuel_type(self) -> np.ndarray:
+        pass
+
+    @cached_property
     def forest_image(self) -> np.ndarray:
         # Load in the raw forest image
-        forest_image_data = np.loadtxt(self.forest_datafile, skiprows=6)
+        forest_image_data = self.forest_data
 
         # Load color lookup dict
-        fb_lookup = os.path.join(self.data_folder, "fbp_lookup_table.csv")
-        fb_dict = Dictionary(fb_lookup)[1]
-        fb_dict["-9999"] = [0, 0, 0]
+        color_dict = self.fbp_lookup_dict[1]
+        color_dict["-9999"] = [0, 0, 0]
 
         # Apply lookup dict to raw forest data
         forest_image = np.zeros(
@@ -87,7 +100,7 @@ class ExperimentHelper:
         )
         for x in range(forest_image_data.shape[0]):
             for y in range(forest_image_data.shape[1]):
-                forest_image[x, y] = fb_dict[str(int(forest_image_data[x, y]))][:3]
+                forest_image[x, y] = color_dict[str(int(forest_image_data[x, y]))][:3]
 
         return forest_image
 

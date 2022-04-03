@@ -15,6 +15,11 @@ ENVS = []
 _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
+# Note: cv2 uses BGR not RGB so use the former
+_FIRE_COLOR = [0, 0, 255]  # red
+_HARVEST_COLOR = [255, 255, 255]  # white
+
+
 def fire_size_reward(state, forest, scale=10):
     idxs = np.where(state > 0)
     return -len(idxs[0]) / (forest.shape[0] * forest.shape[1]) * scale
@@ -64,24 +69,32 @@ class FireEnv(Env):
         # Cell2Fire Process
         self.fire_process = Cell2FireProcess(self)
 
-    def step(self, action, debug: bool = True):
-        # if debug:
-        #     print(action, "step")
+    def step(self, action: int, debug: bool = True):
+        """
+        Step in the environment
+
+        :param action: index of cell to harvest, using 0 indexing
+        :param debug:
+        """
+        if debug:
+            print(f"=== Step {self.iter} ===")
+            print(f"Action: {action}")
 
         result = ""
-        q = 0
         while result != "Input action":
             result = self.fire_process.read_line()
-            # print(result)
-            # assert len(result)>0
+            if debug:
+                print(result)
 
-        value = str(action + 1) + "\n"
-        value = bytes(value, "UTF-8")
-        self.fire_process.write_action(value)
+        # IMPORTANT! Actions must be indexed from 0. The Cell2FireProcess class will
+        # handle the indexing when calling Cell2Fire
+        self.fire_process.apply_actions(action)
 
         state_file = self.fire_process.read_line()
-        # FIXME: is this necessary?
+        # Hack: supposedly this allows time for the CSV to be written by the subprocess
+        # in time...
         time.sleep(0.005)
+
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
 
@@ -92,11 +105,18 @@ class FireEnv(Env):
 
     def render(self, mode="human", **kwargs):
         """Render the geographic image and fire"""
+        if mode != "human":
+            raise NotImplementedError("Only human mode is supported")
+
         im = (self.forest_image * 255).astype("uint8")
 
         # Set fire cells
-        idxs = np.where(self.state > 0)
-        im[idxs] = [0, 0, 255]
+        fire_idxs = np.where(self.state > 0)
+        im[fire_idxs] = _FIRE_COLOR
+
+        # Set harvest cells
+        harvest_idxs = np.where(self.state < 0)
+        im[harvest_idxs] = _HARVEST_COLOR
 
         # Scale to be larger
         im = cv2.resize(
@@ -114,19 +134,24 @@ class FireEnv(Env):
         return self.state
 
 
-def main(**env_kwargs):
+def main(debug: bool, **env_kwargs):
     # TODO(willshen): allow environment to be parallelized
+    # TODO(willshen): fix random ignition starts on non-ignition cells
     env = FireEnv(**env_kwargs)
     state = env.reset()
     done = False
     while not done:
         action = env.action_space.sample()
-        state, reward, done, info = env.step(action)
+        state, reward, done, info = env.step(action, debug=debug)
         env.render()
+        time.sleep(0.1)
+
         # if done:
         #     state = env.reset()
+
+    input("Press Enter to finish...")
     print("Finished!")
 
 
 if __name__ == "__main__":
-    main()
+    main(debug=False)

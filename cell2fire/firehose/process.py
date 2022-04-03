@@ -1,5 +1,5 @@
 import subprocess
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List, Union
 
 from firehose.models import IgnitionPoints
 
@@ -34,14 +34,28 @@ class Cell2FireProcess:
     def spawn(self):
         print(f"Spawning cell2fire process with command:\n{self._command_str}")
         self.process = subprocess.Popen(
-            self._command_str_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+            self._command_str_args,
+            stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE,
         )
 
     def read_line(self) -> str:
         return self.process.stdout.readline().strip().decode("utf-8")
 
-    def write_action(self, action: bytes):
-        self.process.stdin.write(action)
+    def apply_actions(self, actions: Union[int, List[int]]):
+        if isinstance(actions, int):
+            actions = [actions]
+
+        # Note: Indexing starts from 1 in Cell2Fire grid representation
+        cell2fire_actions = [str(action + 1) for action in actions]
+
+        # Input is a single line with indices of cells to harvest separated by spaces
+        value = " ".join(cell2fire_actions) + "\n"
+        value = bytes(value, "UTF-8")
+        self.write_actions(value)
+
+    def write_actions(self, actions_encoded: bytes):
+        self.process.stdin.write(actions_encoded)
         self.process.stdin.flush()
 
     def reset(self):
