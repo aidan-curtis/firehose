@@ -17,30 +17,35 @@ class Cell2FireProcess:
     # TODO: detect if process throws an error?
 
     def __init__(self, env: "FireEnv"):
-        self._command_str = _COMMAND_STR.format(
-            binary=env.helper.binary_path,
-            input=env.helper.tmp_input_folder,
-            output=env.helper.output_folder,
-            ignition_radius=IgnitionPoints.RADIUS,
-            sim_years=1,
-        )
-
+        self.env = env
+        self.spawn_count = 0
         # Copy input directory to temporary directory (well it's not temporary)
         env.helper.manipulate_input_data_folder(env.ignition_points)
 
-        self._command_str_args = self._command_str.split(" ")
         self.process: Optional[subprocess.Popen] = None
 
         # Simulation (i.e. process) is finished
         self.finished: bool = False
 
+    def get_command_str(self) -> str:
+        return _COMMAND_STR.format(
+            binary=self.env.helper.binary_path,
+            input=self.env.helper.tmp_input_folder,
+            output=self.env.helper.output_folder + f"run_{self.spawn_count}/",
+            ignition_radius=IgnitionPoints.RADIUS,
+            sim_years=1,
+        )
+
     def spawn(self):
-        print(f"Spawning cell2fire process with command:\n{self._command_str}")
+        print(f"Spawning cell2fire process with command:\n{self.get_command_str()}")
+        command_str_args = self.get_command_str().split(" ")
+
         self.process = subprocess.Popen(
-            self._command_str_args,
+            command_str_args,
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,
         )
+        self.spawn_count += 1
 
     def read_line(self) -> str:
         return self.process.stdout.readline().strip().decode("utf-8")
