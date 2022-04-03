@@ -99,6 +99,7 @@ class ExperimentHelper:
 
     @cached_property
     def forest_image(self) -> np.ndarray:
+        """Forest image in RGB (not BGR)"""
         # Load in the raw forest image
         forest_image_data = self.forest_data
 

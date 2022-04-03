@@ -1,14 +1,14 @@
 import os
 import time
-from typing import List, Optional
 
 import cv2
 import numpy as np
 import pandas as pd
 from gym import Env, spaces
-from gym.spaces import Discrete, Box
+from gym.spaces import Discrete
+from typing import Optional
 
-from firehose.models import IgnitionPoint, ExperimentHelper, IgnitionPoints
+from firehose.models import ExperimentHelper, IgnitionPoints, IgnitionPoint
 from firehose.process import Cell2FireProcess
 
 ENVS = []
@@ -17,7 +17,7 @@ _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 # Note: cv2 uses BGR not RGB so use the former
 _FIRE_COLOR = [0, 0, 255]  # red
-_HARVEST_COLOR = [255, 255, 255]  # white
+_HARVEST_COLOR = [42, 42, 165]  # brown
 
 
 def fire_size_reward(state, forest, scale=10):
@@ -108,7 +108,9 @@ class FireEnv(Env):
         if mode != "human":
             raise NotImplementedError("Only human mode is supported")
 
+        # Scale to 255 and flip from RGB to BGR as CV2 uses the latter
         im = (self.forest_image * 255).astype("uint8")
+        im = im[:, :, ::-1]
 
         # Set fire cells
         fire_idxs = np.where(self.state > 0)
@@ -136,9 +138,9 @@ class FireEnv(Env):
 
 def main(debug: bool, **env_kwargs):
     # TODO(willshen): allow environment to be parallelized
-    # TODO(willshen): fix random ignition starts on non-ignition cells
     env = FireEnv(**env_kwargs)
-    state = env.reset()
+    _ = env.reset()
+
     done = False
     while not done:
         action = env.action_space.sample()
@@ -154,4 +156,4 @@ def main(debug: bool, **env_kwargs):
 
 
 if __name__ == "__main__":
-    main(debug=False)
+    main(debug=False, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))
