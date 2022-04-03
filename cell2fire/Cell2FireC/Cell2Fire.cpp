@@ -1455,10 +1455,6 @@ int main(int argc, char * argv[]){
 		int tstep = 0;  // time steps within an episode
 		int stop = 0;  // boolean flag indicating whether to stop
 
-        // Whether to accept input actions - only for debugging, set to `true` for our training
-        // Set to false for OG Cell2Fire
-        bool input_actions = true;
-
 		// Parallel loop across threads
 		#pragma omp for 
 		for(ep = 1; ep <= args.TotalSims; ep++){
@@ -1480,7 +1476,7 @@ int main(int argc, char * argv[]){
 			// While instead of for to have explicit breaking condition
 			while (tstep <= Forest.args.MaxFirePeriods * Forest.args.TotalYears - 1 && stop == 0){   
 				// printf("\n ---- tstep %d \n", tstep);
-                if (input_actions) {
+                if (not args.DisableActions) {
                     std::string action;
                     std::cout << "Input action" << std::endl;
                     // Need to use getline not just cin as the latter only reads up to first whitespace

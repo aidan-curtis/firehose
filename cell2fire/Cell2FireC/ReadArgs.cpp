@@ -74,6 +74,7 @@ void parseArgs(int argc, char * argv[], arguments * args_ptr)
 	bool prom_tuned = false;
 	bool out_stats = false;	
 	bool bbo_tuning = false;
+	bool disable_actions = false;
 	
 	//--out-messages
     if(cmdOptionExists(argv, argv+argc, "--output-messages")){
@@ -133,6 +134,11 @@ void parseArgs(int argc, char * argv[], arguments * args_ptr)
 	if(cmdOptionExists(argv, argv+argc, "--bbo")){
         bbo_tuning = true;
 		printf("BBOTuning: %d \n", out_stats);
+    }
+
+    if(cmdOptionExists(argv, argv+argc, "--disable-actions")){
+        disable_actions = true;
+		printf("DisableActions: %d \n", out_stats);
     }
 
 	
@@ -329,7 +335,8 @@ void parseArgs(int argc, char * argv[], arguments * args_ptr)
 	args_ptr->FinalGrid = out_finalgrid;
 	args_ptr->PromTuned = prom_tuned;
 	args_ptr->Stats = out_stats;   
-	args_ptr->BBOTuning = bbo_tuning;   
+	args_ptr->BBOTuning = bbo_tuning;
+	args_ptr->DisableActions = disable_actions;
 	
 }
 
