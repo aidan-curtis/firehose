@@ -69,7 +69,7 @@ class FireEnv(Env):
         # Cell2Fire Process
         self.fire_process = Cell2FireProcess(self)
 
-    def step(self, action: int, debug: bool = True):
+    def step(self, action: int, debug: bool = False):
         """
         Step in the environment
 

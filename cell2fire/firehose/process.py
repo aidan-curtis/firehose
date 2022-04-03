@@ -60,7 +60,7 @@ class Cell2FireProcess:
                 break
 
     def apply_actions(self, actions: Union[int, List[int]], verbose: bool = False):
-        if isinstance(actions, int):
+        if not isinstance(actions, list):
             actions = [actions]
 
         # Note: Indexing starts from 1 in Cell2Fire grid representation
