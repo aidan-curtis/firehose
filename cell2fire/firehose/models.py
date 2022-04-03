@@ -10,6 +10,9 @@ import numpy as np
 from utils.ReadDataPrometheus import Dictionary
 
 
+_NO_FUEL_STR: str = "NFnfuel"
+
+
 @dataclass(frozen=True)
 class IgnitionPoint:
     idx: int
@@ -82,8 +85,17 @@ class ExperimentHelper:
         fbp_dict = Dictionary(fbp_lookup)
         return fbp_dict
 
-    def forest_fuel_type(self) -> np.ndarray:
-        pass
+    @cached_property
+    def forest_non_fuel(self) -> np.ndarray:
+        """Array with 1 if non-fuel and 0 if fuel"""
+        fuel_type_dict = self.fbp_lookup_dict[2]
+
+        forest_non_fuels = np.zeros_like(self.forest_data)
+        for x in range(forest_non_fuels.shape[0]):
+            for y in range(forest_non_fuels.shape[1]):
+                cell_id = str(int(self.forest_data[x, y]))
+                forest_non_fuels[x, y] = fuel_type_dict[cell_id] == _NO_FUEL_STR
+        return forest_non_fuels
 
     @cached_property
     def forest_image(self) -> np.ndarray:
@@ -134,16 +146,17 @@ class ExperimentHelper:
         :return: List of ignition points, which are tuples with
             (year, index of cell with the ignition point)
         """
-        height, width = self.forest_image.shape[:2]
-        available_idxs = np.arange(width * height)
+        # Can only sample from cells that are fuel
+        # Need to flatten as Cell2Fire represents as list not matrix
+        non_fuel_flattened = self.forest_non_fuel.flatten()
+        available_idxs = np.where(non_fuel_flattened == 0)[0].tolist()
+        assert len(available_idxs) > 0, "No available cells to sample from"
 
         # Set radius class variable
+        # FIXME: check this actually works
         IgnitionPoints.RADIUS = radius
 
-        # TODO: check type of vegetation in forest image or do we not care?
-        #  we should probably otherwise there could be no ignition and loop fails
         ignition_points = np.random.choice(available_idxs, num_points, replace=False)
-
         ignition_points = IgnitionPoints(
             points=[
                 IgnitionPoint(point, year + idx)

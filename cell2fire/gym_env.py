@@ -32,7 +32,7 @@ class FireEnv(Env):
         max_steps: int = 200,
         ignition_points: Optional[IgnitionPoints] = None,
         reward_func=fire_size_reward,
-        num_ignition_points: int = 5,  # if ignition_points is specified this is ignored
+        num_ignition_points: int = 1,  # if ignition_points is specified this is ignored
     ):
         # TODO: Create the process with the input map
         self.iter = 0

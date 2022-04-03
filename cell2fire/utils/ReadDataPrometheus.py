@@ -52,7 +52,8 @@ def Dictionary(filename):
     aux = 1
     file = open(filename, "r") 
     row = {}
-    colors = {} 
+    colors = {}
+    fuel_types = {}
     all = {}
     
     # Read file and save colors and ftypes dictionaries
@@ -72,12 +73,14 @@ def Dictionary(filename):
                                float(line[5]) / 255.0,
                                float(line[6]) / 255.0,
                                1.0)
+
+            fuel_types[line[0]] = line[3]
             all[line[0]] = line
     
         if aux == 1:
             aux +=1
             
-    return row, colors
+    return row, colors, fuel_types
     
 
 '''
