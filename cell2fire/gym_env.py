@@ -1,15 +1,15 @@
 import os
-import time
+from typing import Optional
 
 import cv2
 import numpy as np
 import pandas as pd
 from gym import Env, spaces
 from gym.spaces import Discrete
-from typing import Optional
 
-from firehose.models import ExperimentHelper, IgnitionPoints, IgnitionPoint
+from firehose.models import ExperimentHelper, IgnitionPoints
 from firehose.process import Cell2FireProcess
+from firehose.utils import wait_until_file_populated
 
 ENVS = []
 _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -85,15 +85,13 @@ class FireEnv(Env):
         self.fire_process.apply_actions(action, debug)
 
         state_file = self.fire_process.read_line()
-        # Hack: supposedly this allows time for the CSV to be written by the subprocess
-        # in time...
-        time.sleep(0.005)
-
         if not state_file.endswith(".csv"):
             raise RuntimeError(
                 f"Something went wrong. State file returned was {state_file}"
             )
 
+        # Bad Hack
+        wait_until_file_populated(state_file)
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
 

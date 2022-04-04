@@ -157,7 +157,7 @@ class ExperimentHelper:
         assert len(available_idxs) > 0, "No available cells to sample from"
 
         # Set radius class variable
-        # FIXME: check this actually works
+        # FIXME: check the radius actually works
         IgnitionPoints.RADIUS = radius
 
         ignition_points = np.random.choice(available_idxs, num_points, replace=False)

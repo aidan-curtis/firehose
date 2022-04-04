@@ -18,7 +18,7 @@ class Cell2FireProcess:
 
     def __init__(self, env: "FireEnv"):
         self.env = env
-        self.spawn_count = 0
+        self._spawn_count = 0
         # Copy input directory to temporary directory (well it's not temporary)
         env.helper.manipulate_input_data_folder(env.ignition_points)
 
@@ -31,7 +31,8 @@ class Cell2FireProcess:
         return _COMMAND_STR.format(
             binary=self.env.helper.binary_path,
             input=self.env.helper.tmp_input_folder,
-            output=self.env.helper.output_folder + f"run_{self.spawn_count}/",
+            # Output directory includes the spawn count so we write to separate places
+            output=self.env.helper.output_folder + f"run_{self._spawn_count}/",
             ignition_radius=IgnitionPoints.RADIUS,
             sim_years=1,
         )
@@ -45,7 +46,7 @@ class Cell2FireProcess:
             stdout=subprocess.PIPE,
             stdin=subprocess.PIPE,
         )
-        self.spawn_count += 1
+        self._spawn_count += 1
 
     def read_line(self) -> str:
         return self.process.stdout.readline().strip().decode("utf-8")
