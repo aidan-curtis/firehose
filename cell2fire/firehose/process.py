@@ -12,7 +12,6 @@ _COMMAND_STR = "{binary} --input-instance-folder {input} --output-folder {output
 --weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad {ignition_radius} --seed 123 --nthreads 1 \
 --ROS-Threshold 0.1 --HFI-Threshold 0.1  --HarvestPlan"
 
-
 class Cell2FireProcess:
     # TODO: detect if process throws an error?
 
@@ -84,9 +83,12 @@ class Cell2FireProcess:
         self.process.stdin.write(actions_encoded)
         self.process.stdin.flush()
 
-    def reset(self):
-        # Kill current process and reboot it
+    def kill(self):
         if self.process:
             self.process.kill()
+
+    def reset(self, verbose: bool=False):
+        # Kill current process and reboot it
+        self.kill()
         self.spawn()
-        self.progress_to_next_state()
+        self.progress_to_next_state(verbose)

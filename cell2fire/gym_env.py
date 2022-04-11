@@ -85,6 +85,8 @@ class FireEnv(Env):
         self.fire_process.apply_actions(action, debug)
 
         state_file = self.fire_process.read_line()
+        if debug:
+            print("State file:", state_file)
         if not state_file.endswith(".csv"):
             raise RuntimeError(
                 f"Something went wrong. State file returned was {state_file}"
@@ -137,28 +139,43 @@ class FireEnv(Env):
         self.iter = 0
         self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1]))
         # Kill and respawn Cell2Fire process
-        self.fire_process.reset()
+        self.fire_process.reset(kwargs.get("debug", False))
         return self.state
 
 
 def main(debug: bool, **env_kwargs):
     # TODO(willshen): allow environment to be parallelized
     env = FireEnv(**env_kwargs)
-    _ = env.reset()
+    env.render()
+
+    _ = env.reset(debug=debug)
 
     done = False
+    idx = 0
     while not done:
-        action = env.action_space.sample()
-        state, reward, done, info = env.step(action, debug=debug)
-        env.render()
+        if idx == 0:
+            action = 0
+        elif idx == 1:
+            action = 1599
+        else:
+            action = env.action_space.sample()
+        idx += 1
 
+        try:
+            state, reward, done, info = env.step(action, debug=debug)
+        except Exception as e:
+            print(e)
+            env.fire_process.kill()
+            return
+
+        env.render()
         # if done:
         #     state = env.reset()
 
-    input("Press Enter to finish...")
+    # input("Press Enter to finish...")
     print("Finished!")
 
 
 if __name__ == "__main__":
-    main(debug=False, max_steps=1000)
+    main(debug=True, max_steps=1000)
     # main(debug=True, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))
