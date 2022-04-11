@@ -1494,9 +1494,9 @@ int main(int argc, char * argv[]){
                     // the code above when they initialize and reset things
                     for (int i=0; i<numbers.size(); i++){
                         // Set cell fuel types
-                        Forest.fTypeCells[numbers[i]] = 0;
-                        Forest.fTypeCells2[numbers[i]] = "NonBurnable";
-                        Forest.statusCells[numbers[i]] = 3;
+//                        Forest.fTypeCells[numbers[i]] = 0;
+//                        Forest.fTypeCells2[numbers[i]] = "NonBurnable";
+//                        Forest.statusCells[numbers[i]] = 3;
 
                         // Insert/Remove everything to make life easier
                         Forest.harvestCells.insert(numbers[i]);
