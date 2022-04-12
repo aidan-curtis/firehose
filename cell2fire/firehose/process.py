@@ -1,3 +1,4 @@
+import os
 import subprocess
 from typing import Optional, TYPE_CHECKING, List, Union
 
@@ -19,7 +20,9 @@ class Cell2FireProcess:
         self.env = env
         self._spawn_count = 0
         # Copy input directory to temporary directory (well it's not temporary)
-        env.helper.manipulate_input_data_folder(env.ignition_points)
+        # If it already exists then another process probably already did it
+        if not os.path.exists(env.helper.tmp_input_folder):
+            env.helper.manipulate_input_data_folder(env.ignition_points)
 
         self.process: Optional[subprocess.Popen] = None
 

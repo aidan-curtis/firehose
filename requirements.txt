@@ -10,3 +10,4 @@ deap
 # Additional dependencies for our RL stuff
 gym
 stable-baselines3
+tensorboard
