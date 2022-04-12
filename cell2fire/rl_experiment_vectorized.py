@@ -21,13 +21,15 @@ num_cpu = 16
 
 
 def main(
-    total_timesteps=500000,
-    checkpoint_save_freq=10000,
+    total_timesteps=2_000_000,
+    checkpoint_save_freq=int(2_000_000 / 100),
     should_eval=False,
     tf_logdir="./tmp/ppo_static_vectorized",
 ):
     model_save_dir = f'./vectorize_model_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
     print("Saving checkpoints to", model_save_dir)
+    print("Total timesteps:", total_timesteps)
+    print("Checkpoint freq:", checkpoint_save_freq)
 
     env_with_fixed_ignition = lambda: FireEnv(
         ignition_points=IgnitionPoints([IgnitionPoint(1100, 1)])
@@ -38,6 +40,7 @@ def main(
     )
 
     # model = DDPG("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ddpg_static_7")
+    tf_logdir = f'{tf_logdir}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")})'
     model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tf_logdir)
     print("Tensorboard logdir:", tf_logdir)
     # model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/dqn_static_7")
@@ -46,7 +49,12 @@ def main(
     )
 
     ####
-    model.learn(total_timesteps=total_timesteps, callback=[checkpoint_callback])
+    try:
+        model.learn(total_timesteps=total_timesteps, callback=[checkpoint_callback])
+    except Exception as e:
+        model.save(os.path.join(model_save_dir, "ppo_final.zip"))
+        raise e
+
     model.save(os.path.join(model_save_dir, "ppo_final.zip"))
     #####
     env.close()
@@ -62,6 +70,8 @@ def main(
             if done:
                 obs = eval_env.reset()
         eval_env.close()
+
+    print("Done!")
 
 
 if __name__ == "__main__":
