@@ -16,9 +16,9 @@ ENVS = []
 _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
-# Note: cv2 uses BGR not RGB so use the former
-_FIRE_COLOR = [0, 0, 255]  # red
-_HARVEST_COLOR = [42, 42, 165]  # brown
+# Note: use RGB here, render method will convert to BGR for gym
+_FIRE_COLOR = [255, 0, 0]  # red
+_HARVEST_COLOR = [165, 42, 42]  # brown
 
 
 def fire_size_reward(state, forest, scale=10):
@@ -144,12 +144,11 @@ class FireEnv(Env):
 
     def render(self, mode="human", **kwargs):
         """Render the geographic image and fire"""
-        if mode != "human":
+        if mode not in {"human", "rgb_array"}:
             raise NotImplementedError(f"Only human mode is supported. Not {mode}")
 
-        # Scale to 255 and flip from RGB to BGR as CV2 uses the latter
+        # Scale to 255
         im = (self.forest_image * 255).astype("uint8")
-        im = im[:, :, ::-1]
 
         # Set fire cells
         fire_idxs = np.where(self.state > 0)
@@ -159,12 +158,18 @@ class FireEnv(Env):
         harvest_idxs = np.where(self.state < 0)
         im[harvest_idxs] = _HARVEST_COLOR
 
-        # Scale to be larger
-        im = cv2.resize(
-            im, (im.shape[1] * 4, im.shape[0] * 4), interpolation=cv2.INTER_AREA
-        )
-        cv2.imshow("Fire", im)
-        cv2.waitKey(10)
+        if mode == "human":
+            # Flip RGB to BGR as cv2 uses the latter
+            im = im[:, :, ::-1]
+
+            # Scale to be larger
+            im = cv2.resize(
+                im, (im.shape[1] * 4, im.shape[0] * 4), interpolation=cv2.INTER_AREA
+            )
+            cv2.imshow("Fire", im)
+            cv2.waitKey(10)
+        else:
+            return im
 
     def reset(self, **kwargs):
         """Reset environment and restart process"""

@@ -1,4 +1,7 @@
+from datetime import datetime
+
 from stable_baselines3 import PPO, DDPG, DQN
+from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -16,7 +19,16 @@ from typing import Callable
 set_training_enabled(True)
 num_cpu = 16
 
-if __name__ == "__main__":
+
+def main(
+    total_timesteps=500000,
+    checkpoint_save_freq=10000,
+    should_eval=False,
+    tf_logdir="./tmp/ppo_static_vectorized",
+):
+    model_save_dir = f'./vectorize_model_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+    print("Saving checkpoints to", model_save_dir)
+
     env_with_fixed_ignition = lambda: FireEnv(
         ignition_points=IgnitionPoints([IgnitionPoint(1100, 1)])
     )
@@ -26,18 +38,31 @@ if __name__ == "__main__":
     )
 
     # model = DDPG("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ddpg_static_7")
-    model = PPO(
-        "MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ppo_static_vectorized"
-    )
+    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tf_logdir)
+    print("Tensorboard logdir:", tf_logdir)
     # model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/dqn_static_7")
+    checkpoint_callback = CheckpointCallback(
+        save_freq=checkpoint_save_freq, save_path=model_save_dir
+    )
 
-    model.learn(total_timesteps=10000)
-
-    obs = env.reset()
-    for i in range(1000):
-        action, _states = model.predict(obs, deterministic=True)
-        obs, reward, done, info = env.step(action)
-        env.render()
-        if done:
-            obs = env.reset()
+    ####
+    model.learn(total_timesteps=total_timesteps, callback=[checkpoint_callback])
+    model.save(os.path.join(model_save_dir, "ppo_final.zip"))
+    #####
     env.close()
+
+    # Create new env for evaluation that isn't vectorized
+    if should_eval:
+        eval_env = FireEnv(ignition_points=IgnitionPoints([IgnitionPoint(1100, 1)]))
+        obs = eval_env.reset()
+        for i in range(1000):
+            action, _states = model.predict(obs, deterministic=True)
+            obs, reward, done, info = eval_env.step(action)
+            eval_env.render()
+            if done:
+                obs = eval_env.reset()
+        eval_env.close()
+
+
+if __name__ == "__main__":
+    main()
