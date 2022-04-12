@@ -682,7 +682,7 @@ bool Cell2Fire::RunIgnition(std::default_random_engine generator, int rnumber3){
 
 		} else {
 			this->noIgnition = true;
-			std::cout  <<"Next year..." << std::endl;
+			// std::cout  <<"Next year..." << std::endl;
 			if (this->args.verbose){
 				std::cout << "No ignition during year " << this->year << ", Cell " << this->IgnitionPoints[this->year-1] << " is already burnt or non-burnable type" << std::endl;
 			}

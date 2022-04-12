@@ -11,6 +11,7 @@ from cell2fire.firehose.config import training_enabled
 from firehose.models import ExperimentHelper, IgnitionPoints, IgnitionPoint
 from firehose.process import Cell2FireProcess
 from firehose.utils import wait_until_file_populated
+import random
 
 ENVS = []
 _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -59,7 +60,7 @@ class FireEnv(Env):
         # Flat discrete action space
         if self.action_type == "flat":
             self.action_space = Discrete(
-                self.forest_image.shape[0] * self.forest_image.shape[1]
+                (self.forest_image.shape[0] * self.forest_image.shape[1]) - 1
             )
         elif self.action_type == "xy":
             self.action_space = Box(low=0, high=1, shape=(2,))
@@ -71,7 +72,7 @@ class FireEnv(Env):
             self.observation_space = spaces.Box(
                 low=0,
                 high=255,
-                shape=(self.forest_image.shape[0], self.forest_image.shape[1], 1),
+                shape=(self.forest_image.shape[0], self.forest_image.shape[1]),
                 dtype=np.uint8,
             )
         elif self.observation_space == "time":
@@ -80,7 +81,7 @@ class FireEnv(Env):
                 low=0, high=max_steps + 1, shape=(1,), dtype=np.uint8,
             )
 
-        self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1], 1), dtype=np.uint8)
+        self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1]), dtype=np.uint8)
 
         # Reward function
         self.reward_func = reward_func
@@ -113,14 +114,21 @@ class FireEnv(Env):
         else:
             raise NotImplementedError
 
+        # Code crashes for some reason when action == ignition point
+        for ignition_point in self.ignition_points.points:
+            if(ignition_point.idx) == action+1:
+                action = random.choice([action+1, action-1])
+
         # IMPORTANT! Actions must be indexed from 0. The Cell2FireProcess class will
         # handle the indexing when calling Cell2Fire
         self.fire_process.apply_actions(action, debug)
 
         state_file = self.fire_process.read_line()
-        if debug:
-            print("State file:", state_file)
+        
         if not state_file.endswith(".csv"):
+            print(action)
+            print("State file:", state_file)
+
             print("Proc Error. Resetting state")
             return self.state, self.reward_func(self.state, self.forest_image), True, {}
 
@@ -128,7 +136,6 @@ class FireEnv(Env):
         wait_until_file_populated(state_file)
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
-        print(self.state.shape)
 
         # Progress fire process to next state
         self.fire_process.progress_to_next_state(debug)
@@ -177,7 +184,7 @@ class FireEnv(Env):
     def reset(self, **kwargs):
         """Reset environment and restart process"""
         self.iter = 0
-        self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1], 1), dtype=np.uint8)
+        self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1]), dtype=np.uint8)
         # Kill and respawn Cell2Fire process
         self.fire_process.reset(kwargs.get("debug", False))
         # return self.state
