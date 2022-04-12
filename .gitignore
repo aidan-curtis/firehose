@@ -34,3 +34,4 @@ cmake-build-debug/
 firehose-results/
 
 __pycache__
+.ipynb_checkpoints

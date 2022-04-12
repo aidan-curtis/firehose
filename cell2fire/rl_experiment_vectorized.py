@@ -11,23 +11,28 @@ from firehose.models import ExperimentHelper, IgnitionPoints, IgnitionPoint
 
 from typing import Callable
 
+num_cpu = 16
 
-num_cpu = 4
-env = make_vec_env(FireEnv, n_envs=num_cpu)
+if __name__ == "__main__":
+    env_with_fixed_ignition = lambda: FireEnv(
+        ignition_points=IgnitionPoints([IgnitionPoint(1100, 1)])
+    )
+    # Need to use use SubprocVecEnv so its parallelized. DummyVecEnv is sequential on a single core
+    env = make_vec_env(
+        env_with_fixed_ignition, n_envs=num_cpu, vec_env_cls=SubprocVecEnv
+    )
 
+    # model = DDPG("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ddpg_static_7")
+    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ppo_static_7")
+    # model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/dqn_static_7")
 
+    model.learn(total_timesteps=400000)
 
-# model = DDPG("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ddpg_static_7")
-model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ppo_static_7")
-# model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/dqn_static_7")
-
-model.learn(total_timesteps=400000)
-
-obs = env.reset()
-for i in range(1000):
-    action, _states = model.predict(obs, deterministic=True)
-    obs, reward, done, info = env.step(action)
-    env.render()
-    if done:
-      obs = env.reset()
-env.close()
+    obs = env.reset()
+    for i in range(1000):
+        action, _states = model.predict(obs, deterministic=True)
+        obs, reward, done, info = env.step(action)
+        env.render()
+        if done:
+            obs = env.reset()
+    env.close()

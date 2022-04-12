@@ -1,5 +1,7 @@
 import os
+import random
 import shutil
+import string
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property
@@ -54,6 +56,10 @@ class ExperimentHelper:
         default_factory=lambda: datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     )
 
+    @cached_property
+    def random_seed(self) -> str:
+        return "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
     @property
     def binary_path(self) -> str:
         return os.path.join(self.base_dir, "Cell2FireC/Cell2Fire")
@@ -68,11 +74,15 @@ class ExperimentHelper:
 
     @property
     def output_folder(self) -> str:
-        return "{}/../results/{}_{}/".format(self.base_dir, self.map, self.datetime_str)
+        return "{}/../results/{}_{}_{}/".format(
+            self.base_dir, self.map, self.datetime_str, self.random_seed
+        )
 
     @property
     def tmp_input_folder(self):
-        return "{}/../input/{}_{}/".format(self.base_dir, self.map, self.datetime_str)
+        return "{}/../input/{}_{}_{}/".format(
+            self.base_dir, self.map, self.datetime_str, self.random_seed
+        )
 
     @cached_property
     def forest_data(self) -> np.ndarray:

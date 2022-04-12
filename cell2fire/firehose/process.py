@@ -13,6 +13,7 @@ _COMMAND_STR = "{binary} --input-instance-folder {input} --output-folder {output
 --weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad {ignition_radius} --seed 123 --nthreads 1 \
 --ROS-Threshold 0.1 --HFI-Threshold 0.1  --HarvestPlan"
 
+
 class Cell2FireProcess:
     # TODO: detect if process throws an error?
 
@@ -20,9 +21,7 @@ class Cell2FireProcess:
         self.env = env
         self._spawn_count = 0
         # Copy input directory to temporary directory (well it's not temporary)
-        # If it already exists then another process probably already did it
-        if not os.path.exists(env.helper.tmp_input_folder):
-            env.helper.manipulate_input_data_folder(env.ignition_points)
+        env.helper.manipulate_input_data_folder(env.ignition_points)
 
         self.process: Optional[subprocess.Popen] = None
 
@@ -44,9 +43,7 @@ class Cell2FireProcess:
         command_str_args = self.get_command_str().split(" ")
 
         self.process = subprocess.Popen(
-            command_str_args,
-            stdout=subprocess.PIPE,
-            stdin=subprocess.PIPE,
+            command_str_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
         )
         self._spawn_count += 1
 
@@ -89,8 +86,9 @@ class Cell2FireProcess:
     def kill(self):
         if self.process:
             self.process.kill()
+            self.process.wait()
 
-    def reset(self, verbose: bool=False):
+    def reset(self, verbose: bool = False):
         # Kill current process and reboot it
         self.kill()
         self.spawn()
