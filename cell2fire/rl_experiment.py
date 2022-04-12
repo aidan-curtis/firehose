@@ -20,5 +20,5 @@ for i in range(1000):
     obs, reward, done, info = env.step(action)
     env.render()
     if done:
-      obs = env.reset()
+        obs = env.reset()
 env.close()

@@ -7,6 +7,7 @@ import pandas as pd
 from gym import Env, spaces
 from gym.spaces import Discrete, Box
 
+from cell2fire.firehose.config import training_enabled
 from firehose.models import ExperimentHelper, IgnitionPoints, IgnitionPoint
 from firehose.process import Cell2FireProcess
 from firehose.utils import wait_until_file_populated
@@ -74,10 +75,7 @@ class FireEnv(Env):
         elif self.observation_space == "time":
             # Blind model
             self.observation_space = spaces.Box(
-                low=0,
-                high=max_steps + 1,
-                shape=(1,),
-                dtype=np.uint8,
+                low=0, high=max_steps + 1, shape=(1,), dtype=np.uint8,
             )
 
         self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1]))
@@ -134,7 +132,7 @@ class FireEnv(Env):
 
         # Check if we've exceeded max steps or Cell2Fire finished simulating
         done = self.iter >= self.max_steps or self.fire_process.finished
-        if not debug:
+        if not debug and not training_enabled():
             print(f"\rStep {self.iter}", end="")
             if done:
                 print()
@@ -147,7 +145,7 @@ class FireEnv(Env):
     def render(self, mode="human", **kwargs):
         """Render the geographic image and fire"""
         if mode != "human":
-            raise NotImplementedError("Only human mode is supported")
+            raise NotImplementedError(f"Only human mode is supported. Not {mode}")
 
         # Scale to 255 and flip from RGB to BGR as CV2 uses the latter
         im = (self.forest_image * 255).astype("uint8")

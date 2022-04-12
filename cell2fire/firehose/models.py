@@ -11,6 +11,7 @@ import numpy as np
 
 from utils.ReadDataPrometheus import Dictionary
 
+from cell2fire.firehose.config import training_enabled
 
 _NO_FUEL_STR: str = "NFnfuel"
 

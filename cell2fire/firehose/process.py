@@ -4,6 +4,8 @@ from typing import Optional, TYPE_CHECKING, List, Union
 
 from firehose.models import IgnitionPoints
 
+from cell2fire.firehose.config import training_enabled
+
 if TYPE_CHECKING:
     # Workaround for circular imports as I can't be bothered refactoring
     from gym_env import FireEnv
@@ -39,7 +41,8 @@ class Cell2FireProcess:
         )
 
     def spawn(self):
-        print(f"Spawning cell2fire process with command:\n{self.get_command_str()}")
+        if not training_enabled():
+            print(f"Spawning cell2fire process with command:\n{self.get_command_str()}")
         command_str_args = self.get_command_str().split(" ")
 
         self.process = subprocess.Popen(
@@ -60,7 +63,8 @@ class Cell2FireProcess:
 
             # Cell2Fire finished the simulation - break out of the loop
             if "Total Harvested Cells" in result:
-                print("Cell2Fire finished the simulation")
+                if not training_enabled():
+                    print("Cell2Fire finished the simulation")
                 self.finished = True
                 break
 
