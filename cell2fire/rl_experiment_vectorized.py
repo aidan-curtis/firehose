@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from stable_baselines3 import PPO, A2C, TRPO
+from stable_baselines3 import PPO, A2C
+from sb3_contrib.trpo.trpo import TRPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.utils import set_random_seed
@@ -34,7 +35,7 @@ def main(
     print("Checkpoint freq:", checkpoint_save_freq)
 
     # Set the log directory to be a combination of the hyperparameters
-    tf_logdir = "{}/{}_{}_{}_{}_{}".format(tf_logdir, args.algo, args.map, args.ignition_mode, args.action_space, args.seed)
+    tf_logdir = "{}/{}_{}_{}_{}_{}".format(tf_logdir, args.algo, args.map, args.ignition_type, args.action_space, args.seed)
 
     if(args.ignition_type == "fixed"):
         env_with_fixed_ignition = lambda: FireEnv(
@@ -58,9 +59,10 @@ def main(
     # model = DDPG("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ddpg_static_7")
     tf_logdir = f'{tf_logdir}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
+    print(args.architecture)
     if(args.algo == "ppo"):
         model = PPO(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
-    elif(args.algo == "a2c")
+    elif(args.algo == "a2c"):
         model = A2C(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
     elif(args.algo == "trpo"):
         model = TRPO(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
@@ -101,11 +103,12 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--algo", default="ppo", help="Specifies the RL algorithm to use")
-    parser.add_argument("-a", "--map", default="20x20", help="Specifies the map to run the environment in")
-    parser.add_argument("-a", "--architecture", default="CnnPolicy", help="Specifies whether to use an MLP or CNN as the neural architecture for the agent")
+    parser.add_argument("-al", "--algo", default="ppo", help="Specifies the RL algorithm to use")
+    parser.add_argument("-m", "--map", default="20x20", help="Specifies the map to run the environment in")
+    parser.add_argument("-ar", "--architecture", default="CnnPolicy", help="Specifies whether to use an MLP or CNN as the neural architecture for the agent")
     parser.add_argument("-i", "--ignition_type", default="fixed", help="Specifies whether to use a random or fixed fire ignitinon point")
     parser.add_argument("-p", "--preharvest", default="fixed", help="Specifies whether or not to harvest before fire ignition")
+    parser.add_argument("-as", "--action_space", default="flat", help="Action space type")
     parser.add_argument("-s", "--seed", default="0", help="RL seed")
     args = parser.parse_args()
     main(args)

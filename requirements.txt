@@ -11,3 +11,4 @@ deap
 gym
 stable-baselines3
 tensorboard
+sb3_contrib

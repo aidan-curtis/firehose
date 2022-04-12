@@ -71,7 +71,7 @@ class FireEnv(Env):
             self.observation_space = spaces.Box(
                 low=0,
                 high=255,
-                shape=(self.forest_image.shape[0], self.forest_image.shape[1]),
+                shape=(self.forest_image.shape[0], self.forest_image.shape[1], 1),
                 dtype=np.uint8,
             )
         elif self.observation_space == "time":
@@ -80,7 +80,7 @@ class FireEnv(Env):
                 low=0, high=max_steps + 1, shape=(1,), dtype=np.uint8,
             )
 
-        self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1]))
+        self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1], 1), dtype=np.uint8)
 
         # Reward function
         self.reward_func = reward_func
@@ -128,6 +128,7 @@ class FireEnv(Env):
         wait_until_file_populated(state_file)
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
+        print(self.state.shape)
 
         # Progress fire process to next state
         self.fire_process.progress_to_next_state(debug)
@@ -176,7 +177,7 @@ class FireEnv(Env):
     def reset(self, **kwargs):
         """Reset environment and restart process"""
         self.iter = 0
-        self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1]))
+        self.state = np.zeros((self.forest_image.shape[0], self.forest_image.shape[1], 1), dtype=np.uint8)
         # Kill and respawn Cell2Fire process
         self.fire_process.reset(kwargs.get("debug", False))
         # return self.state
