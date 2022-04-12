@@ -27,6 +27,8 @@ def fire_size_reward(state, forest, scale=10):
 
 
 class FireEnv(Env):
+    metadata = {"render.modes": ["human", "rgb_array"]}
+
     def __init__(
         self,
         fire_map: str = "Harvest40x40",

@@ -36,3 +36,6 @@ firehose-results/
 __pycache__
 .ipynb_checkpoints
 *.zip
+*.mp4
+*.meta.json
+

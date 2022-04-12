@@ -12,13 +12,12 @@ from firehose.models import IgnitionPoints, IgnitionPoint
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    model = PPO.load("../vectorize_model_2022-04-11_22-36-35/ppo_final.zip")
     eval_env = FireEnv(ignition_points=IgnitionPoints([IgnitionPoint(1100, 1)]))
     obs = eval_env.reset()
-    video_recorder = VideoRecorder(eval_env, "ppo_vid.mp4", enabled=True)
+    video_recorder = VideoRecorder(eval_env, "random.mp4", enabled=True)
 
     for i in range(1000):
-        action, _states = model.predict(obs, deterministic=True)
+        action = eval_env.action_space.sample()
         obs, reward, done, info = eval_env.step(action)
 
         eval_env.render()
