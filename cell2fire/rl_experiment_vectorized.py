@@ -40,7 +40,7 @@ def main(
     )
 
     # model = DDPG("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ddpg_static_7")
-    tf_logdir = f'{tf_logdir}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")})'
+    tf_logdir = f'{tf_logdir}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
     model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tf_logdir)
     print("Tensorboard logdir:", tf_logdir)
     # model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/dqn_static_7")

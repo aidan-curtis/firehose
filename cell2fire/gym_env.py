@@ -160,14 +160,14 @@ class FireEnv(Env):
         harvest_idxs = np.where(self.state < 0)
         im[harvest_idxs] = _HARVEST_COLOR
 
+        # Scale to be larger
+        im = cv2.resize(
+            im, (im.shape[1] * 4, im.shape[0] * 4), interpolation=cv2.INTER_AREA
+        )
+
         if mode == "human":
             # Flip RGB to BGR as cv2 uses the latter
             im = im[:, :, ::-1]
-
-            # Scale to be larger
-            im = cv2.resize(
-                im, (im.shape[1] * 4, im.shape[0] * 4), interpolation=cv2.INTER_AREA
-            )
             cv2.imshow("Fire", im)
             cv2.waitKey(10)
         else:
