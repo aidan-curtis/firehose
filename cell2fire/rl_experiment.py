@@ -3,19 +3,16 @@ from cell2fire.gym_env import FireEnv
 import os
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy
+from firehose.models import ExperimentHelper, IgnitionPoints, IgnitionPoint
 
 
-# TODO(Aidan): debug why RL isn't working, maybe on 3x3 grid
-log_dir = "tmp/"
-os.makedirs(log_dir, exist_ok=True)
+env = FireEnv(ignition_points=IgnitionPoints([IgnitionPoint(1100, 1)]))
 
-env = FireEnv()
-env = Monitor(env, log_dir)
+# model = DDPG("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ddpg_static_7")
+model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ppo_static_7")
+# model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/dqn_static_7")
 
-# model = PPO("MlpPolicy", env, verbose=1)
-model = DQN("MlpPolicy", env, verbose=1)
-
-model.learn(total_timesteps=1000000)
+model.learn(total_timesteps=400000)
 
 obs = env.reset()
 for i in range(1000):
