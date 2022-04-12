@@ -16,13 +16,16 @@ do
 		do
 			for action_space in "xy" "flat"
 			do
-				for seed in "1" "2" "3"
+				for architecture in "MlpPolicy" "CnnPolicy"
 				do
-					if [ $((i)) -eq  $((SLURM_ARRAY_TASK_ID + 0)) ]; then
-						python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_mode="$ignition_mode" --action_space=$action_space --seed=$seed
-					fi
-					i=$((i+1))
-			    done
+					for seed in "1"
+					do
+						if [ $((i)) -eq  $((SLURM_ARRAY_TASK_ID + 0)) ]; then
+							python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_mode="$ignition_mode" --action_space=$action_space --seed=$seed
+						fi
+						i=$((i+1))
+				    done
+				done
 			done
 		done
 	done

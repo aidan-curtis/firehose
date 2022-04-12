@@ -26,12 +26,15 @@ def main(
     total_timesteps=2_000_000,
     checkpoint_save_freq=int(2_000_000 / 100),
     should_eval=False,
-    tf_logdir="./tmp/ppo_static_vectorized",
+    tf_logdir="./tmp",
 ):
     model_save_dir = f'./vectorize_model_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
     print("Saving checkpoints to", model_save_dir)
     print("Total timesteps:", total_timesteps)
     print("Checkpoint freq:", checkpoint_save_freq)
+
+    # Set the log directory to be a combination of the hyperparameters
+    tf_logdir = "{}/{}_{}_{}_{}_{}".format(tf_logdir, args.algo, args.map, args.ignition_mode, args.action_space, args.seed)
 
     if(args.ignition_type == "fixed"):
         env_with_fixed_ignition = lambda: FireEnv(
@@ -56,17 +59,16 @@ def main(
     tf_logdir = f'{tf_logdir}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
     if(args.algo == "ppo"):
-        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=tf_logdir)
+        model = PPO(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
     elif(args.algo == "a2c")
-        model = A2C("MlpPolicy", env, verbose=1, tensorboard_log=tf_logdir)
+        model = A2C(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
     elif(args.algo == "trpo"):
-        model = TRPO("MlpPolicy", env, verbose=1, tensorboard_log=tf_logdir)
+        model = TRPO(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
     else:
         raise NotImplementedError
 
-
     print("Tensorboard logdir:", tf_logdir)
-    # model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/dqn_static_7")
+
     checkpoint_callback = CheckpointCallback(
         save_freq=checkpoint_save_freq, save_path=model_save_dir
     )
@@ -101,6 +103,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--algo", default="ppo", help="Specifies the RL algorithm to use")
     parser.add_argument("-a", "--map", default="20x20", help="Specifies the map to run the environment in")
+    parser.add_argument("-a", "--architecture", default="CnnPolicy", help="Specifies whether to use an MLP or CNN as the neural architecture for the agent")
     parser.add_argument("-i", "--ignition_type", default="fixed", help="Specifies whether to use a random or fixed fire ignitinon point")
     parser.add_argument("-p", "--preharvest", default="fixed", help="Specifies whether or not to harvest before fire ignition")
     parser.add_argument("-s", "--seed", default="0", help="RL seed")
