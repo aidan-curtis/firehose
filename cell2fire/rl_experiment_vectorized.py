@@ -26,9 +26,11 @@ def main(
     args,
     total_timesteps=2_000_000,
     checkpoint_save_freq=int(2_000_000 / 100),
-    should_eval=False,
-    tf_logdir="./tmp",
+    should_eval=False
 ):
+
+    tf_logdir = args.logdir
+
     model_save_dir = f'./vectorize_model_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
     print("Saving checkpoints to", model_save_dir)
     print("Total timesteps:", total_timesteps)
@@ -36,18 +38,21 @@ def main(
 
     # Set the log directory to be a combination of the hyperparameters
     tf_logdir = "{}/{}_{}_{}_{}_{}".format(tf_logdir, args.algo, args.map, args.ignition_type, args.action_space, args.seed)
-
+    outdir = os.environ['TMPDIR'] if 'TMPDIR' in os.environ.keys() else os.path.dirname(os.path.realpath(__file__))
+    
     if(args.ignition_type == "fixed"):
         ig_points = IgnitionPoints([IgnitionPoint(200, 1)])
         single_env = lambda: FireEnv(
             ignition_points=ig_points,
             action_type = args.action_space,
-            fire_map = args.map
+            fire_map = args.map,
+            output_dir = outdir
         )
     elif(args.ignition_type == "random"):
         single_env = lambda: FireEnv(
             action_type = args.action_space, 
-            fire_map = args.map
+            fire_map = args.map,
+            output_dir = outdir
         )
     else:
         raise NotImplementedError
@@ -128,5 +133,6 @@ if __name__ == "__main__":
     # parser.add_argument("-p", "--preharvest", default="fixed", help="Specifies whether or not to harvest before fire ignition")
     parser.add_argument("-as", "--action_space", default="flat", help="Action space type")
     parser.add_argument("-s", "--seed", default="0", help="RL seed")
+    parser.add_argument("-l", "--logdir", default="/home/gridsan/acurtis/firehosetmp", help="RL seed")
     args = parser.parse_args()
     main(args)

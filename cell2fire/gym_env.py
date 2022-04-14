@@ -36,6 +36,7 @@ class FireEnv(Env):
         action_type: str = "flat",
         observation_type: str = "forest",
         max_steps: int = 200,
+        output_dir: str = _MODULE_DIR,
         ignition_points: Optional[IgnitionPoints] = None,
         reward_func=fire_size_reward,
         num_ignition_points: int = 1,  # if ignition_points is specified this is ignored
@@ -45,7 +46,7 @@ class FireEnv(Env):
         self.max_steps = max_steps
 
         # Helper code
-        self.helper = ExperimentHelper(base_dir=_MODULE_DIR, map=fire_map)
+        self.helper = ExperimentHelper(base_dir=_MODULE_DIR, map=fire_map, output_dir=output_dir)
         self.forest_image = self.helper.forest_image
 
         # Randomly generate ignition points if required
@@ -128,7 +129,6 @@ class FireEnv(Env):
         if not state_file.endswith(".csv"):
             print(action)
             print("State file:", state_file)
-
             print("Proc Error. Resetting state")
             return self.state, self.reward_func(self.state, self.forest_image), True, {}
 

@@ -26,7 +26,7 @@ do
 		do
 			for action_space in "xy" "flat"
 			do
-				for architecture in "MlpPolicy" # "CnnPolicy" TODO: ???
+				for architecture in "MlpPolicy" # "CnnPolicy" TODO: I haven't been able to get this one to work -- some dimensionality error
 				do
 					for seed in "1"
 					do

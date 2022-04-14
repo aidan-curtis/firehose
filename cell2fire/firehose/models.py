@@ -51,6 +51,7 @@ class IgnitionPoints:
 @dataclass(frozen=True)
 class ExperimentHelper:
     base_dir: str
+    output_dir: str
     map: str
 
     datetime_str: str = field(
@@ -75,8 +76,8 @@ class ExperimentHelper:
 
     @property
     def output_folder(self) -> str:
-        return "{}/../results/{}_{}_{}/".format(
-            self.base_dir, self.map, self.datetime_str, self.random_seed
+        return "{}/results/{}_{}_{}/".format(
+            self.output_dir, self.map, self.datetime_str, self.random_seed
         )
 
     @property
