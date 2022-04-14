@@ -21,6 +21,7 @@ _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 # Note: use RGB here, render method will convert to BGR for gym
 _FIRE_COLOR = [255, 0, 0]  # red
 _HARVEST_COLOR = [165, 42, 42]  # brown
+_IGNITION_COLOR = [255, 0, 255]  # pink
 
 
 def fire_size_reward(state, forest, scale=10):
@@ -183,7 +184,7 @@ class FireEnv(Env):
         return_state = self.get_observation()
         return return_state, self.reward_func(return_state, self.forest_image), done, {}
 
-    def render(self, mode="human", scale_factor: int = 4, **kwargs):
+    def render(self, mode="human", scale_factor: int = 10, **kwargs):
         """Render the geographic image and fire"""
         if mode not in {"human", "rgb_array"}:
             raise NotImplementedError(f"Only human mode is supported. Not {mode}")
@@ -198,6 +199,11 @@ class FireEnv(Env):
         # Set harvest cells
         harvest_idxs = np.where(self.state < 0)
         im[harvest_idxs] = _HARVEST_COLOR
+
+        # Set ignition point
+        assert len(self.ignition_points.points) == 1, "Only one ignition point supported"
+        ignition_point = self.ignition_points.points[0]
+        im[ignition_point.y, ignition_point.x] = _IGNITION_COLOR
 
         # Scale to be larger
         im = cv2.resize(
@@ -255,5 +261,6 @@ def main(debug: bool, delay_time: float = 0.0, **env_kwargs):
 if __name__ == "__main__":
     # main(debug=True, max_steps=1000)
     # main(debug=True, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))
-    for _ in range(100):
+    for run_idx in range(100):
+        print(f"=== Run {run_idx} ===")
         main(debug=False, delay_time=0.00)

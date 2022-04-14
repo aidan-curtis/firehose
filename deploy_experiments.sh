@@ -5,7 +5,9 @@
 i=1
 
 
-for algo in "a2c" "ppo" "dqn" # "trpo" "random" "naive" # TODO: Will
+# We will run random and naive comparisons separately.
+# They are supported in the evaluate_model.py script
+for algo in "a2c" "ppo" "trpo"
 do
 	for map in "Sub20x20" "Harvest40x40" "Sub40x40"
 	do
