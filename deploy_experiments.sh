@@ -22,7 +22,7 @@ for algo in "a2c" "ppo" "trpo" # "random" "naive" # TODO: Will
 do
 	for map in "Sub20x20" "Harvest40x40" "Sub40x40"
 	do
-		for ignition_type in "fixed" #"random" # TODO: Will
+		for ignition_type in "fixed" "random"
 		do
 			for action_space in "xy" "flat"
 			do

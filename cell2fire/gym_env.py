@@ -1,5 +1,6 @@
 import os
 import random
+import time
 from typing import Optional
 
 import cv2
@@ -53,6 +54,10 @@ class FireEnv(Env):
         # TODO: fix this
         # Randomly generate ignition points if required
         if not ignition_points:
+            # We can only have 1 ignition in a given year in Cell2Fire (supposedly)
+            assert (
+                num_ignition_points == 1
+            ), "Only 1 ignition point supported at the moment"
             self.ignition_points = self.helper.generate_random_ignition_points(
                 num_points=num_ignition_points,
             )
@@ -220,32 +225,35 @@ class FireEnv(Env):
         return self.get_observation()
 
 
-def main(debug: bool, **env_kwargs):
+def main(debug: bool, delay_time: float = 0.0, **env_kwargs):
     env = FireEnv(**env_kwargs)
     env.render()
 
     _ = env.reset(debug=debug)
 
     done = False
-    idx = 0
+    num_steps = 0
     while not done:
         action = env.action_space.sample()
-        idx += 1
         try:
             state, reward, done, info = env.step(action, debug=debug)
+            num_steps += 1
         except Exception as e:
-            print(e)
             env.fire_process.kill()
-            return
+            raise e
 
         env.render()
+        if delay_time > 0.0:
+            time.sleep(delay_time)
         # if done:
         #     state = env.reset()
 
     # input("Press Enter to finish...")
-    print("Finished!")
+    print(f"Finished! Num steps = {num_steps}")
 
 
 if __name__ == "__main__":
     # main(debug=True, max_steps=1000)
-    main(debug=True, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))
+    # main(debug=True, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))
+    for _ in range(100):
+        main(debug=False, delay_time=0.00)
