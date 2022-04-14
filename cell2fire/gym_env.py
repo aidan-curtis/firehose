@@ -202,7 +202,7 @@ class FireEnv(Env):
 
         # Set ignition point
         assert len(self.ignition_points.points) == 1, "Only one ignition point supported"
-        ignition_point = self.ignition_points.points[0]  # subtract 1 since we use 0 indexing
+        ignition_point = self.ignition_points.points[0]
         im[ignition_point.y, ignition_point.x] = _IGNITION_COLOR
 
         # Scale to be larger

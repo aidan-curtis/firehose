@@ -70,7 +70,9 @@ class NaiveAlgorithm(Algorithm):
 
             chosen_fire_idx = -1
             while (
-                chosen_fire_idx == -1 or chosen_fire_idx == self.ignition_point.idx - 1
+                # Don't allow selection of ignition point itself
+                chosen_fire_idx == -1
+                or chosen_fire_idx == self.ignition_point.idx - 1
             ):
                 if not dist:
                     return 0, None
