@@ -183,7 +183,7 @@ class FireEnv(Env):
         return_state = self.get_observation()
         return return_state, self.reward_func(return_state, self.forest_image), done, {}
 
-    def render(self, mode="human", scale_factor: int = 4, **kwargs):
+    def render(self, mode="human", scale_factor: int = 10, **kwargs):
         """Render the geographic image and fire"""
         if mode not in {"human", "rgb_array"}:
             raise NotImplementedError(f"Only human mode is supported. Not {mode}")
@@ -255,5 +255,6 @@ def main(debug: bool, delay_time: float = 0.0, **env_kwargs):
 if __name__ == "__main__":
     # main(debug=True, max_steps=1000)
     # main(debug=True, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))
-    for _ in range(100):
+    for run_idx in range(100):
+        print(f"=== Run {run_idx} ===")
         main(debug=False, delay_time=0.00)

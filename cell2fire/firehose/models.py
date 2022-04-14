@@ -175,7 +175,8 @@ class ExperimentHelper:
         ignition_points = np.random.choice(available_idxs, num_points, replace=False)
         ignition_points = IgnitionPoints(
             points=[
-                IgnitionPoint(point, year + idx)
+                # Add one to point as indexed from 1 in Cell2Fire
+                IgnitionPoint(point + 1, year + idx)
                 for idx, point in enumerate(ignition_points)
             ]
         )
