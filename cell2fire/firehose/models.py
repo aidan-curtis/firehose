@@ -5,10 +5,9 @@ import string
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property
-from typing import List, ClassVar, Optional
+from typing import ClassVar, List, Optional
 
 import numpy as np
-
 from utils.ReadDataPrometheus import Dictionary
 
 from cell2fire.firehose.config import training_enabled
@@ -19,6 +18,8 @@ _NO_FUEL_STR: str = "NFnfuel"
 @dataclass(frozen=True)
 class IgnitionPoint:
     idx: int
+    x: int  # column
+    y: int  # row
     year: int
 
 
@@ -168,6 +169,11 @@ class ExperimentHelper:
         available_idxs = np.where(non_fuel_flattened == 0)[0].tolist()
         assert len(available_idxs) > 0, "No available cells to sample from"
 
+        height, width = self.forest_non_fuel.shape
+        flatten_idx_to_yx = {
+            x + y * width: (y, x) for x in range(width) for y in range(height)
+        }
+
         # Set radius class variable
         # FIXME: check the radius actually works
         IgnitionPoints.RADIUS = radius
@@ -176,7 +182,12 @@ class ExperimentHelper:
         ignition_points = IgnitionPoints(
             points=[
                 # Add one to point as indexed from 1 in Cell2Fire
-                IgnitionPoint(point + 1, year + idx)
+                IgnitionPoint(
+                    idx=point + 1,
+                    x=flatten_idx_to_yx[point][1],
+                    y=flatten_idx_to_yx[point][0],
+                    year=year + idx,
+                )
                 for idx, point in enumerate(ignition_points)
             ]
         )

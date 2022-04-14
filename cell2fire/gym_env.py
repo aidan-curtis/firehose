@@ -21,6 +21,7 @@ _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 # Note: use RGB here, render method will convert to BGR for gym
 _FIRE_COLOR = [255, 0, 0]  # red
 _HARVEST_COLOR = [165, 42, 42]  # brown
+_IGNITION_COLOR = [255, 0, 255]  # pink
 
 
 def fire_size_reward(state, forest, scale=10):
@@ -198,6 +199,11 @@ class FireEnv(Env):
         # Set harvest cells
         harvest_idxs = np.where(self.state < 0)
         im[harvest_idxs] = _HARVEST_COLOR
+
+        # Set ignition point
+        assert len(self.ignition_points.points) == 1, "Only one ignition point supported"
+        ignition_point = self.ignition_points.points[0]  # subtract 1 since we use 0 indexing
+        im[ignition_point.y, ignition_point.x] = _IGNITION_COLOR
 
         # Scale to be larger
         im = cv2.resize(

@@ -59,14 +59,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "-al",
         "--algo",
-        default="trpo",
+        default="naive",
         help="Specifies the RL algorithm to use",
         choices={"random", "naive", "ppo", "a2c", "trpo"},
     )
     parser.add_argument(
         "-m",
         "--map",
-        default="Sub20x20",
+        default="Harvest40x40",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
