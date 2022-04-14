@@ -82,11 +82,12 @@ class NaiveAlgorithm(Algorithm):
                 del dist[closest_idx]
 
             if chosen_fire_idx in self.prev_actions and chosen_fire_idx != -1:
+                print("chosen", chosen_fire_idx)
+                print("prev actions", self.prev_actions)
                 raise NotImplementedError(
                     "very unexpected case where a fire put out has recaught fire"
                 )
 
             self.prev_actions.add(chosen_fire_idx)
-            print("\n", chosen_fire_idx)
             return chosen_fire_idx, None
             # raise NotImplementedError
