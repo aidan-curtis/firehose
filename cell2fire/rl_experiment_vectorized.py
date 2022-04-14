@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from stable_baselines3 import PPO, A2C
+from stable_baselines3 import PPO, A2C, DQN
 from sb3_contrib.trpo.trpo import TRPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
@@ -82,6 +82,8 @@ def main(
         model = NaiveAlgorithm(
             args.architecture, env, verbose=1, tensorboard_log=tf_logdir
         )
+    elif args.algo == "dqn":
+        model = DQN(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
     else:
         raise NotImplementedError
 

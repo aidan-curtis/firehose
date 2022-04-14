@@ -1,30 +1,17 @@
 #!/bin/sh
-#SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task 16
-#SBATCH --time=12:00:00
-#SBATCH --mem-per-cpu=16000
 
-
-# TODO: curtisa
-SLURM_ARRAY_TASK_ID=3
 i=1
 
-#A2C 40x40 1000 fps
-#PPO 40x40 1000 fps
-#TRPO 40x40 1000 fps
 
-#A2C 20x20 8000 fps
-#PPO 20x20 8000 fps
-#TRPO 20x20 8000 fps
-
-for algo in "a2c" "ppo" "trpo" # "random" "naive" # TODO: Will
+for algo in "a2c" "ppo" "dqn" # "trpo" "random" "naive" # TODO: Will
 do
 	for map in "Sub20x20" "Harvest40x40" "Sub40x40"
 	do
-		for ignition_type in "fixed" "random"
+		for ignition_type in "random" # "fixed"
 		do
-			for action_space in "xy" "flat"
+			for action_space in "flat" #"xy" 
 			do
 				for architecture in "MlpPolicy" # "CnnPolicy" TODO: I haven't been able to get this one to work -- some dimensionality error
 				do

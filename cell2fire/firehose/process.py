@@ -94,6 +94,7 @@ class Cell2FireProcess:
 
     def reset(self, verbose: bool = False):
         # Kill current process and reboot it
+        self.finished = False
         self.kill()
         self.spawn()
         self.progress_to_next_state(verbose)
