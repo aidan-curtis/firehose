@@ -20,7 +20,7 @@ _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 # Note: use RGB here, render method will convert to BGR for gym
 _FIRE_COLOR = [255, 0, 0]  # red
-_HARVEST_COLOR = [165, 42, 42]  # brown
+_HARVEST_COLOR = [28, 163, 236]  # blue
 _IGNITION_COLOR = [255, 0, 255]  # pink
 
 
