@@ -61,7 +61,7 @@ class FireEnv(Env):
         :param num_ignition_points: #ignition points to generate if not specified
         :param pre_run_steps: number of steps to run before allowing any actions
         :param num_steps_after_action: number of steps to run after each action
-            (is not run after prerun steps)
+            (is not run after pre-run steps)
         """
         self.iter = 0
         self.max_steps = max_steps

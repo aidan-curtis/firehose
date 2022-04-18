@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 from datetime import datetime
 
@@ -23,7 +24,7 @@ def main(args):
         action_type=args.action_space,
         fire_map=args.map,
         output_dir=outdir,
-        # prerun_steps=30,
+        # pre_run_steps=30,
         # num_steps_after_action=7,
     )
 
@@ -46,7 +47,8 @@ def main(args):
         raise NotImplementedError
 
     date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    video_recorder = VideoRecorder(env, f"{args.algo}-{date_str}.mp4", enabled=True)
+    if not args.disable_video:
+        video_recorder = VideoRecorder(env, f"{args.algo}-{date_str}.mp4", enabled=True)
 
     obs = env.reset()
     env.render()
@@ -56,13 +58,15 @@ def main(args):
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, done, info = env.step(action)
         env.render()
-        video_recorder.capture_frame()
+        if not args.disable_video:
+            video_recorder.capture_frame()
 
         if done:
             obs = env.reset()
     env.close()
 
-    video_recorder.close()
+    if not args.disable_video:
+        video_recorder.close()
     print("Done!")
 
 
@@ -88,10 +92,14 @@ if __name__ == "__main__":
         "-as", "--action_space", default="flat", help="Action space type"
     )
     parser.add_argument(
+        "-d", "--disable-video", action="store_true", help="Disable video recording"
+    )
+    parser.add_argument(
         "-i",
         "--ignition_type",
         default="fixed",
         help="Specifies whether to use a random or fixed fire ignition point",
         choices={"fixed", "random"},
     )
+    print("Args:", json.dumps(vars(parser.parse_args()), indent=2))
     main(args=parser.parse_args())
