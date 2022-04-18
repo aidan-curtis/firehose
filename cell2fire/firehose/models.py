@@ -18,9 +18,9 @@ _NO_FUEL_STR: str = "NFnfuel"
 @dataclass(frozen=True)
 class IgnitionPoint:
     idx: int
-    x: int  # column
-    y: int  # row
     year: int
+    x: int = -1  # column
+    y: int = -1  # row
 
 
 @dataclass(frozen=True)
@@ -184,9 +184,9 @@ class ExperimentHelper:
                 # Add one to point as indexed from 1 in Cell2Fire
                 IgnitionPoint(
                     idx=point + 1,
+                    year=year + idx,
                     x=flatten_idx_to_yx[point][1],
                     y=flatten_idx_to_yx[point][0],
-                    year=year + idx,
                 )
                 for idx, point in enumerate(ignition_points)
             ]
