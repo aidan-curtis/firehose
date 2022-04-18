@@ -249,8 +249,6 @@ class FireEnv(Env):
         ignition_point = self.ignition_points.points[0]
         im[ignition_point.y, ignition_point.x] = _IGNITION_COLOR
 
-        print(im)
-        print(im.shape)
         return im
 
     def render(self, mode="human", scale_factor: int = 10, **kwargs):
