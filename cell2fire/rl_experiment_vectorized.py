@@ -47,7 +47,7 @@ def main(
     )
 
     if args.ignition_type == "fixed":
-        ig_points = IgnitionPoints([IgnitionPoint(200, 1)])
+        ig_points = IgnitionPoints([IgnitionPoint(idx=200, year=1, x=0, y=0)])
         single_env = lambda: FireEnv(
             ignition_points=ig_points,
             action_type=args.action_space,
@@ -133,12 +133,12 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-al", "--algo", default="ppo", help="Specifies the RL algorithm to use"
+        "-al", "--algo", default="a2c", help="Specifies the RL algorithm to use"
     )
     parser.add_argument(
         "-m",
         "--map",
-        default="Sub20x20",
+        default="Sub40x40",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(

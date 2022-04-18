@@ -13,6 +13,7 @@ from cell2fire.firehose.config import training_enabled
 from firehose.models import ExperimentHelper, IgnitionPoint, IgnitionPoints
 from firehose.process import Cell2FireProcess
 from firehose.utils import wait_until_file_populated
+import copy
 
 ENVS = []
 _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -51,6 +52,8 @@ class FireEnv(Env):
             base_dir=_MODULE_DIR, map=fire_map, output_dir=output_dir
         )
         self.forest_image = self.helper.forest_image
+        self.uforest_image = (self.forest_image * 255).astype("uint8")
+
 
         # TODO: fix this
         # Randomly generate ignition points if required
@@ -100,7 +103,7 @@ class FireEnv(Env):
             self.observation_space = spaces.Box(
                 low=0,
                 high=255,
-                shape=(self.forest_image.shape[0], self.forest_image.shape[1]),
+                shape=(self.forest_image.shape[0], self.forest_image.shape[1], 3),
                 dtype=np.uint8,
             )
         elif self.observation_space == "time":
@@ -113,7 +116,7 @@ class FireEnv(Env):
             )
 
     def get_observation(self):
-        return self.iter if self.observation_type == "time" else self.state
+        return self.iter if self.observation_type == "time" else self.get_painted_image()
 
     def get_action(self, raw_action):
         if self.action_type == "xy":
@@ -184,14 +187,9 @@ class FireEnv(Env):
         return_state = self.get_observation()
         return return_state, self.reward_func(return_state, self.forest_image), done, {}
 
-    def render(self, mode="human", scale_factor: int = 10, **kwargs):
-        """Render the geographic image and fire"""
-        if mode not in {"human", "rgb_array"}:
-            raise NotImplementedError(f"Only human mode is supported. Not {mode}")
-
-        # Scale to 255
-        im = (self.forest_image * 255).astype("uint8")
-
+    def get_painted_image(self):
+        im = copy.copy(self.uforest_image)
+        
         # Set fire cells
         fire_idxs = np.where(self.state > 0)
         im[fire_idxs] = _FIRE_COLOR
@@ -204,6 +202,17 @@ class FireEnv(Env):
         assert len(self.ignition_points.points) == 1, "Only one ignition point supported"
         ignition_point = self.ignition_points.points[0]
         im[ignition_point.y, ignition_point.x] = _IGNITION_COLOR
+
+        print(im)
+        print(im.shape)
+        return im
+
+    def render(self, mode="human", scale_factor: int = 10, **kwargs):
+        """Render the geographic image and fire"""
+        if mode not in {"human", "rgb_array"}:
+            raise NotImplementedError(f"Only human mode is supported. Not {mode}")
+
+        im = self.get_painted_image()
 
         # Scale to be larger
         im = cv2.resize(
@@ -228,6 +237,7 @@ class FireEnv(Env):
         )
         # Kill and respawn Cell2Fire process
         self.fire_process.reset(kwargs.get("debug", False))
+        print("resetting")
         return self.get_observation()
 
 
