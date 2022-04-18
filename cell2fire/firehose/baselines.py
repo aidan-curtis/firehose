@@ -26,6 +26,14 @@ class Algorithm(ABC):
         pass
 
 
+class HumanInputAlgorithm(Algorithm):
+    def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
+        human_actions_str = input("Input actions:")
+        human_actions = [int(act) for act in human_actions_str.split()]
+        assert len(human_actions) == 1, "Only one action supported right now"
+        return human_actions[0], None
+
+
 class RandomAlgorithm(Algorithm):
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
         return self.env.action_space.sample(), None

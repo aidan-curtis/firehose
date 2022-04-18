@@ -1492,11 +1492,17 @@ int main(int argc, char * argv[]){
                     // Note: indexing starts at 0 in arrays and stuff but is 1 in the printed representations
                     // and CSVs and stuff (the latter is my assumption). This is why we see i+1 and i-1 in 
                     // the code above when they initialize and reset things
+
+                    // NOTE: Actions must be 1-indexed
                     for (int i=0; i<numbers.size(); i++){
                         // Set cell fuel types
 //                        Forest.fTypeCells[numbers[i]] = 0;
 //                        Forest.fTypeCells2[numbers[i]] = "NonBurnable";
 //                        Forest.statusCells[numbers[i]] = 3;
+                        // Skip 0 action as that is skip action
+                        if (numbers[i] == 0) {
+                            continue;
+                        }
 
                         // Insert/Remove everything to make life easier
                         Forest.harvestCells.insert(numbers[i]);

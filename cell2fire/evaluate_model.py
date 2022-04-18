@@ -6,8 +6,10 @@ from gym.wrappers.monitoring.video_recorder import VideoRecorder
 from sb3_contrib import TRPO
 from stable_baselines3 import A2C, PPO
 
-from cell2fire.gym_env import FireEnv
-from firehose.baselines import NaiveAlgorithm, RandomAlgorithm
+from cell2fire.gym_env import FireEnv, num_cells_on_fire
+from firehose.baselines import NaiveAlgorithm, RandomAlgorithm, HumanInputAlgorithm
+
+_NO_MODEL_ALGOS = {"random", "naive", "human"}
 
 
 def main(args):
@@ -17,9 +19,15 @@ def main(args):
         else os.path.dirname(os.path.realpath(__file__))
     )
 
-    env = FireEnv(action_type=args.action_space, fire_map=args.map, output_dir=outdir)
+    env = FireEnv(
+        action_type=args.action_space,
+        fire_map=args.map,
+        output_dir=outdir,
+        # prerun_steps=30,
+        # num_steps_after_action=7,
+    )
 
-    if args.algo not in {"random", "naive"}:
+    if args.algo not in _NO_MODEL_ALGOS:
         assert args.model_path, f"Model path is required for alg={args.algo}"
 
     if args.algo == "ppo":
@@ -32,6 +40,8 @@ def main(args):
         model = RandomAlgorithm(env)
     elif args.algo == "naive":
         model = NaiveAlgorithm(env)
+    elif args.algo == "human":
+        model = HumanInputAlgorithm(env)
     else:
         raise NotImplementedError
 
@@ -39,6 +49,8 @@ def main(args):
     video_recorder = VideoRecorder(env, f"{args.algo}-{date_str}.mp4", enabled=True)
 
     obs = env.reset()
+    env.render()
+
     done = False
     while not done:
         action, _states = model.predict(obs, deterministic=True)
@@ -61,12 +73,12 @@ if __name__ == "__main__":
         "--algo",
         default="naive",
         help="Specifies the RL algorithm to use",
-        choices={"random", "naive", "ppo", "a2c", "trpo"},
+        choices={"human", "random", "naive", "ppo", "a2c", "trpo"},
     )
     parser.add_argument(
         "-m",
         "--map",
-        default="Harvest40x40",
+        default="Sub20x20",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
