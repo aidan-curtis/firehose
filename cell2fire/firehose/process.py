@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 _COMMAND_STR = "{binary} --input-instance-folder {input} --output-folder {output} --ignitions --sim-years {sim_years} \
 --nsims 1 --grids --final-grid --Fire-Period-Length 1.0 --output-messages \
 --weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad {ignition_radius} --seed 123 --nthreads 1 \
---ROS-Threshold 0.1 --HFI-Threshold 0.1  --HarvestPlan"
+--ROS-Threshold 0.1 --HFI-Threshold 0.1 --steps-action {steps_per_action} --steps-before {steps_before_sim} \
+--HarvestPlan"
 
 
 class Cell2FireProcess:
@@ -37,6 +38,8 @@ class Cell2FireProcess:
             output=self.env.helper.output_folder + f"run_{self._spawn_count}/",
             ignition_radius=IgnitionPoints.RADIUS,
             sim_years=1,
+            steps_per_action=self.env.steps_per_action,
+            steps_before_sim=self.env.steps_before_sim,
         )
 
     def spawn(self):
@@ -45,7 +48,7 @@ class Cell2FireProcess:
         command_str_args = self.get_command_str().split(" ")
 
         self.process = subprocess.Popen(
-            command_str_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+            command_str_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE
         )
         self._spawn_count += 1
 

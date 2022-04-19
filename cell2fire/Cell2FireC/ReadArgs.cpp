@@ -337,7 +337,24 @@ void parseArgs(int argc, char * argv[], arguments * args_ptr)
 	args_ptr->Stats = out_stats;   
 	args_ptr->BBOTuning = bbo_tuning;
 	args_ptr->DisableActions = disable_actions;
-	
+
+	// Number of simulation steps per action
+	//--steps-action  (int)
+	char * steps_per_action = getCmdOption(argv, argv + argc, "--steps-action");
+    if (steps_per_action){
+        printf("StepsPerAction: %s \n", steps_per_action);
+		args_ptr->StepsPerAction = std::stoi (steps_per_action ,&sz);
+    }
+	else args_ptr->StepsPerAction = 1;
+
+    // Number of simulation steps before any actions can be applied
+	//--steps-before  (int)
+	char * steps_before_sim = getCmdOption(argv, argv + argc, "--steps-before");
+    if (steps_before_sim){
+        printf("StepsBeforeSim: %s \n", steps_before_sim);
+		args_ptr->StepsBeforeSim = std::stoi (steps_before_sim ,&sz);
+    }
+	else args_ptr->StepsBeforeSim = 0;
 }
 
 
@@ -363,8 +380,9 @@ void printArgs(arguments args){
 	std::cout << "noOutput: " << args.NoOutput << std::endl; 
 	std::cout << "verbose: " << args.verbose << std::endl; 
 	std::cout << "seed: " << args.seed << std::endl; 
-	std::cout << "nthreads: " << args.nthreads << std::endl; 
-	
-	
-	
+	std::cout << "nthreads: " << args.nthreads << std::endl;
+
+	std::cout << "DisableActions: " << args.DisableActions << std::endl;
+	std::cout << "StepsPerAction: " << args.StepsPerAction << std::endl;
+    std::cout << "StepsBeforeSim: " << args.StepsPerAction << std::endl;
 }

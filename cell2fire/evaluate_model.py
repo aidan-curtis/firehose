@@ -27,8 +27,8 @@ def main(args):
         output_dir=outdir,
         max_steps=500,
         # ignition_points=IgnitionPoints([IgnitionPoint(370, 1)]),
-        pre_run_steps=50,
-        num_steps_between_actions=10,
+        steps_before_sim=50,
+        steps_per_action=1,
     )
 
     if args.algo not in _NO_MODEL_ALGOS:
@@ -59,13 +59,11 @@ def main(args):
     done = False
     while not done:
         action, _states = model.predict(obs, deterministic=True)
-        obs, reward, done, info = env.step(action)
+        obs, reward, done, info = env.step(action, debug=True)
         env.render()
         if not args.disable_video:
             video_recorder.capture_frame()
 
-        if done:
-            obs = env.reset()
     env.close()
 
     if not args.disable_video:

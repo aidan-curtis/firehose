@@ -47,11 +47,11 @@ class FireEnv(Env):
         ignition_points: Optional[IgnitionPoints] = None,
         reward_func=fire_size_reward,
         num_ignition_points: int = 1,  # if ignition_points is specified this is ignored
-        pre_run_steps: int = 0,
-        num_steps_between_actions: int = 0,
+        steps_before_sim: int = 0,
+        steps_per_action: int = 0,
     ):
         """
-        
+
         :param fire_map: name of Fire map to use, should be in the data/ folder
         :param action_type: flat or xy
         :param observation_type: time or forest
@@ -60,8 +60,8 @@ class FireEnv(Env):
         :param ignition_points: ignition points to use. If None, will generate random ones
         :param reward_func: reward function
         :param num_ignition_points: #ignition points to generate if not specified
-        :param pre_run_steps: number of steps to run before allowing any actions
-        :param num_steps_between_actions: number of steps to run after each action
+        :param steps_before_sim: number of steps to run before allowing any actions
+        :param steps_per_action: number of steps to run after each action
             (is not run after pre-run steps)
         """
         self.iter = 0
@@ -103,12 +103,12 @@ class FireEnv(Env):
         self.reward_func = reward_func
 
         # Number of steps to progress simulation before applying any actions
-        assert pre_run_steps >= 0
-        self.pre_run_steps = pre_run_steps
+        assert steps_before_sim >= 0
+        self.steps_before_sim = steps_before_sim
 
         # Number of steps after each action to wait before taking another action
-        assert num_steps_between_actions >= 0
-        self.num_steps_after_action = num_steps_between_actions
+        assert steps_per_action >= 0
+        self.steps_per_action = steps_per_action
 
         # Note: Cell2Fire Process. Call this at the end of __init__!
         self.fire_process = Cell2FireProcess(self)
@@ -163,8 +163,6 @@ class FireEnv(Env):
         self,
         action,
         debug: bool = False,
-        steps_after_action: bool = False,
-        dont_print: bool = False,
     ):
         """
         Step in the environment
@@ -211,7 +209,7 @@ class FireEnv(Env):
 
         # Check if we've exceeded max steps or Cell2Fire finished simulating
         done = self.iter >= self.max_steps or self.fire_process.finished
-        if not dont_print and not debug and not training_enabled():
+        if not debug and not training_enabled():
             print(
                 f"\rStep {self.iter + 1}/{self.max_steps}. "
                 f"Num cells on fire {num_cells_on_fire(self.state)}",
@@ -220,15 +218,7 @@ class FireEnv(Env):
             if done:
                 print()
 
-        # Handle case where we step simulation after applying each action
-        if not steps_after_action:
-            # Subtract 1 as we already stepped for current action
-            for _ in range(self.num_steps_after_action - 1):
-                # Apply -1 action which is no-op
-                self.step(-1, steps_after_action=True, dont_print=True)
-
         self.iter += 1
-
         return_state = self.get_observation()
         return return_state, self.reward_func(return_state, self.forest_image), done, {}
 
@@ -282,18 +272,6 @@ class FireEnv(Env):
         )
         # Kill and respawn Cell2Fire process
         self.fire_process.reset(kwargs.get("debug", False))
-
-        # Step minimum number of steps before applying actions
-        if self.pre_run_steps > 0:
-            # Override num steps after action so we don't step unnecessarily
-            tmp_num = self.num_steps_after_action
-            self.num_steps_after_action = 0
-
-            for _ in range(self.pre_run_steps):
-                # Apply no-op action
-                self.step(-1)
-
-            self.num_steps_after_action = tmp_num
 
         return self.get_observation()
 
