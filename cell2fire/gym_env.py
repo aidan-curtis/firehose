@@ -48,7 +48,8 @@ class FireEnv(Env):
         reward_func=fire_size_reward,
         num_ignition_points: int = 1,  # if ignition_points is specified this is ignored
         steps_before_sim: int = 0,
-        steps_per_action: int = 0,
+        steps_per_action: int = 1,
+        verbose: bool = False,
     ):
         """
 
@@ -63,6 +64,7 @@ class FireEnv(Env):
         :param steps_before_sim: number of steps to run before allowing any actions
         :param steps_per_action: number of steps to run after each action
             (is not run after pre-run steps)
+        :param verbose: verbose logging
         """
         self.iter = 0
         self.max_steps = max_steps
@@ -107,11 +109,13 @@ class FireEnv(Env):
         self.steps_before_sim = steps_before_sim
 
         # Number of steps after each action to wait before taking another action
-        assert steps_per_action >= 0
+        assert steps_per_action >= 1, "Must have at least 1 step per action"
         self.steps_per_action = steps_per_action
 
+        self.verbose = verbose
+
         # Note: Cell2Fire Process. Call this at the end of __init__!
-        self.fire_process = Cell2FireProcess(self)
+        self.fire_process = Cell2FireProcess(self, verbose)
 
     def _set_action_space(self):
         if self.action_type == "flat":
@@ -136,7 +140,10 @@ class FireEnv(Env):
         elif self.observation_space == "time":
             # Blind model
             self.observation_space = spaces.Box(
-                low=0, high=self.max_steps + 1, shape=(1,), dtype=np.uint8,
+                low=0,
+                high=self.max_steps + 1,
+                shape=(1,),
+                dtype=np.uint8,
             )
 
     def get_observation(self):
@@ -159,22 +166,17 @@ class FireEnv(Env):
         else:
             raise NotImplementedError(f"Unsupported action type {self.action_type}")
 
-    def step(
-        self,
-        action,
-        debug: bool = False,
-    ):
+    def step(self, action):
         """
         Step in the environment
 
         :param action: index of cell to harvest, using 0 indexing
-        :param debug:
         """
         # Get action for action_type
         raw_action = action
         action = self.get_action(raw_action=raw_action)
 
-        if debug:
+        if self.verbose:
             print(f"=== Step {self.iter} ===")
             print(f"Action: {raw_action}")
             if action != raw_action:
@@ -187,7 +189,7 @@ class FireEnv(Env):
 
         # IMPORTANT! Actions must be indexed from 0. The Cell2FireProcess class will
         # handle the indexing when calling Cell2Fire
-        self.fire_process.apply_actions(action, debug)
+        self.fire_process.apply_actions(action)
 
         state_file = self.fire_process.read_line()
 
@@ -205,11 +207,11 @@ class FireEnv(Env):
         self.state = df.values
 
         # Progress fire process to next state
-        self.fire_process.progress_to_next_state(debug)
+        self.fire_process.progress_to_next_state()
 
         # Check if we've exceeded max steps or Cell2Fire finished simulating
         done = self.iter >= self.max_steps or self.fire_process.finished
-        if not debug and not training_enabled():
+        if not self.verbose and not training_enabled():
             print(
                 f"\rStep {self.iter + 1}/{self.max_steps}. "
                 f"Num cells on fire {num_cells_on_fire(self.state)}",
@@ -271,23 +273,23 @@ class FireEnv(Env):
             (self.forest_image.shape[0], self.forest_image.shape[1]), dtype=np.uint8
         )
         # Kill and respawn Cell2Fire process
-        self.fire_process.reset(kwargs.get("debug", False))
+        self.fire_process.reset()
 
         return self.get_observation()
 
 
 def main(debug: bool, delay_time: float = 0.0, **env_kwargs):
-    env = FireEnv(**env_kwargs)
+    env = FireEnv(**env_kwargs, verbose=debug)
     env.render()
 
-    _ = env.reset(debug=debug)
+    _ = env.reset()
 
     done = False
     num_steps = 0
     while not done:
         action = env.action_space.sample()
         try:
-            state, reward, done, info = env.step(action, debug=debug)
+            state, reward, done, info = env.step(action)
             num_steps += 1
         except Exception as e:
             env.fire_process.kill()
@@ -306,6 +308,6 @@ def main(debug: bool, delay_time: float = 0.0, **env_kwargs):
 if __name__ == "__main__":
     # main(debug=True, max_steps=1000)
     # main(debug=True, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))
-    for run_idx in range(100):
+    for run_idx in range(1):
         print(f"=== Run {run_idx} ===")
-        main(debug=False, delay_time=0.00)
+        main(debug=True, delay_time=0.00)

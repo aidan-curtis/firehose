@@ -1,4 +1,3 @@
-import os
 import subprocess
 from typing import TYPE_CHECKING, List, Optional, Union
 
@@ -12,26 +11,31 @@ if TYPE_CHECKING:
 _COMMAND_STR = "{binary} --input-instance-folder {input} --output-folder {output} --ignitions --sim-years {sim_years} \
 --nsims 1 --grids --final-grid --Fire-Period-Length 1.0 --output-messages \
 --weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad {ignition_radius} --seed 123 --nthreads 1 \
---ROS-Threshold 0.1 --HFI-Threshold 0.1 --steps-action {steps_per_action} --steps-before {steps_before_sim} \
---HarvestPlan"
+--ROS-Threshold 0.1 --HFI-Threshold 0.1 --steps-action {steps_per_action} --steps-before {steps_before_sim}"
+# Doesn't seem like its needed as we feed actions manually
+# --HarvestPlan"
+
+_VERBOSE_COMMAND_STR = _COMMAND_STR + " --verbose"
 
 
 class Cell2FireProcess:
     # TODO: detect if process throws an error?
 
-    def __init__(self, env: "FireEnv"):
+    def __init__(self, env: "FireEnv", verbose: bool):
         self.env = env
         self._spawn_count = 0
         # Copy input directory to temporary directory (well it's not temporary)
         env.helper.manipulate_input_data_folder(env.ignition_points)
 
         self.process: Optional[subprocess.Popen] = None
+        self.verbose = verbose
 
         # Simulation (i.e. process) is finished
         self.finished: bool = False
 
     def get_command_str(self) -> str:
-        return _COMMAND_STR.format(
+        format_str = _VERBOSE_COMMAND_STR if self.verbose else _COMMAND_STR
+        return format_str.format(
             binary=self.env.helper.binary_path,
             input=self.env.helper.tmp_input_folder,
             # Output directory includes the spawn count so we write to separate places
@@ -48,19 +52,22 @@ class Cell2FireProcess:
         command_str_args = self.get_command_str().split(" ")
 
         self.process = subprocess.Popen(
-            command_str_args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE
+            command_str_args,
+            stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
         self._spawn_count += 1
 
     def read_line(self) -> str:
         return self.process.stdout.readline().strip().decode("utf-8")
 
-    def progress_to_next_state(self, verbose: bool = False):
+    def progress_to_next_state(self):
         # Step the process until we reach an input action line
         result = ""
         while result != "Input action":
             result = self.read_line()
-            if verbose:
+            if self.verbose:
                 print(result)
 
             # Cell2Fire finished the simulation - break out of the loop
@@ -70,7 +77,7 @@ class Cell2FireProcess:
                 self.finished = True
                 break
 
-    def apply_actions(self, actions: Union[int, List[int]], verbose: bool = False):
+    def apply_actions(self, actions: Union[int, List[int]]):
         if not isinstance(actions, list):
             actions = [actions]
 
@@ -79,7 +86,7 @@ class Cell2FireProcess:
 
         # Input is a single line with indices of cells to harvest separated by spaces
         value = " ".join(cell2fire_actions) + "\n"
-        if verbose:
+        if self.verbose:
             print(value, end="")
 
         value = bytes(value, "UTF-8")
@@ -94,9 +101,9 @@ class Cell2FireProcess:
             self.process.kill()
             self.process.wait()
 
-    def reset(self, verbose: bool = False):
+    def reset(self):
         # Kill current process and reboot it
         self.finished = False
         self.kill()
         self.spawn()
-        self.progress_to_next_state(verbose)
+        self.progress_to_next_state()

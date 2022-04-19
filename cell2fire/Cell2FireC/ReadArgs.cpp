@@ -347,6 +347,10 @@ void parseArgs(int argc, char * argv[], arguments * args_ptr)
     }
 	else args_ptr->StepsPerAction = 1;
 
+	if (args_ptr->StepsPerAction < 1) {
+	    throw std::invalid_argument("StepsPerAction must be >= 1");
+	}
+
     // Number of simulation steps before any actions can be applied
 	//--steps-before  (int)
 	char * steps_before_sim = getCmdOption(argv, argv + argc, "--steps-before");
@@ -355,6 +359,10 @@ void parseArgs(int argc, char * argv[], arguments * args_ptr)
 		args_ptr->StepsBeforeSim = std::stoi (steps_before_sim ,&sz);
     }
 	else args_ptr->StepsBeforeSim = 0;
+
+	if (args_ptr->StepsBeforeSim < 0) {
+        throw std::invalid_argument("StepsBeforeSim must be >= 0");
+    }
 }
 
 
