@@ -62,42 +62,38 @@ class NaiveAlgorithm(Algorithm):
         self.ignition_point_yx = self.flatten_idx_to_yx[self.ignition_point.idx - 1]
 
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
-        cells_on_fire = obs == 1
+        cells_on_fire = self.env.state == 1
 
-        # No cells on fire, just return a random action
-        if np.sum(cells_on_fire) <= 10:
-            return 0, None
-        else:
-            # Find the cell closest on fire to the ignition point that has not
-            # already had an action taken
-            fire_yx = list(zip(*np.where(cells_on_fire)))
-            dist = [
-                np.linalg.norm(np.array(yx) - np.array(self.ignition_point_yx))
-                for yx in fire_yx
-            ]
+        # Find the cell closest on fire to the ignition point that has not
+        # already had an action taken
+        fire_yx = list(zip(*np.where(cells_on_fire)))
+        dist = [
+            np.linalg.norm(np.array(yx) - np.array(self.ignition_point_yx))
+            for yx in fire_yx
+        ]
 
-            chosen_fire_idx = -1
-            while (
-                # Don't allow selection of ignition point itself
-                chosen_fire_idx == -1
-                or chosen_fire_idx == self.ignition_point.idx - 1
-            ):
-                if not dist:
-                    return 0, None
+        chosen_fire_idx = -1
+        while (
+            # Don't allow selection of ignition point itself
+            chosen_fire_idx == -1
+            or chosen_fire_idx == self.ignition_point.idx - 1
+        ):
+            if not dist:
+                # no-op
+                return -1, None
 
-                closest_idx = np.argmin(dist)
-                chosen_fire_yx = fire_yx[closest_idx]
-                chosen_fire_idx = self.flatten_yx_to_idx[chosen_fire_yx]
-                del fire_yx[closest_idx]
-                del dist[closest_idx]
+            closest_idx = np.argmin(dist)
+            chosen_fire_yx = fire_yx[closest_idx]
+            chosen_fire_idx = self.flatten_yx_to_idx[chosen_fire_yx]
+            del fire_yx[closest_idx]
+            del dist[closest_idx]
 
-            if chosen_fire_idx in self.prev_actions and chosen_fire_idx != -1:
-                print("chosen", chosen_fire_idx)
-                print("prev actions", self.prev_actions)
-                raise NotImplementedError(
-                    "very unexpected case where a fire put out has recaught fire"
-                )
+        if chosen_fire_idx in self.prev_actions and chosen_fire_idx != -1:
+            print("chosen", chosen_fire_idx)
+            print("prev actions", self.prev_actions)
+            raise NotImplementedError(
+                "very unexpected case where a fire put out has recaught fire"
+            )
 
-            self.prev_actions.add(chosen_fire_idx)
-            return chosen_fire_idx, None
-            # raise NotImplementedError
+        self.prev_actions.add(chosen_fire_idx)
+        return chosen_fire_idx, None
