@@ -8,7 +8,8 @@ from sb3_contrib import TRPO
 from stable_baselines3 import A2C, PPO
 
 from cell2fire.gym_env import FireEnv, num_cells_on_fire
-from firehose.baselines import NaiveAlgorithm, RandomAlgorithm, HumanInputAlgorithm
+from firehose.baselines import HumanInputAlgorithm, NaiveAlgorithm, RandomAlgorithm
+from firehose.models import IgnitionPoint, IgnitionPoints
 
 _NO_MODEL_ALGOS = {"random", "naive", "human"}
 
@@ -24,8 +25,10 @@ def main(args):
         action_type=args.action_space,
         fire_map=args.map,
         output_dir=outdir,
-        # pre_run_steps=30,
-        # num_steps_after_action=7,
+        max_steps=500,
+        # ignition_points=IgnitionPoints([IgnitionPoint(370, 1)]),
+        pre_run_steps=50,
+        num_steps_between_actions=10,
     )
 
     if args.algo not in _NO_MODEL_ALGOS:

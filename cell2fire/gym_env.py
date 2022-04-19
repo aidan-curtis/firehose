@@ -1,3 +1,4 @@
+import copy
 import os
 import random
 import time
@@ -13,7 +14,6 @@ from cell2fire.firehose.config import training_enabled
 from firehose.models import ExperimentHelper, IgnitionPoint, IgnitionPoints
 from firehose.process import Cell2FireProcess
 from firehose.utils import wait_until_file_populated
-import copy
 
 ENVS = []
 _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -73,7 +73,6 @@ class FireEnv(Env):
         )
         self.forest_image = self.helper.forest_image
         self.uforest_image = (self.forest_image * 255).astype("uint8")
-
 
         # TODO: fix this
         # Randomly generate ignition points if required
@@ -141,7 +140,9 @@ class FireEnv(Env):
             )
 
     def get_observation(self):
-        return self.iter if self.observation_type == "time" else self.get_painted_image()
+        return (
+            self.iter if self.observation_type == "time" else self.get_painted_image()
+        )
 
     def get_action(self, raw_action):
         if self.action_type == "xy":
@@ -233,7 +234,7 @@ class FireEnv(Env):
 
     def get_painted_image(self):
         im = copy.copy(self.uforest_image)
-        
+
         # Set fire cells
         fire_idxs = np.where(self.state > 0)
         im[fire_idxs] = _FIRE_COLOR

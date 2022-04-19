@@ -1,10 +1,9 @@
 import os
 import subprocess
-from typing import Optional, TYPE_CHECKING, List, Union
-
-from firehose.models import IgnitionPoints
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from cell2fire.firehose.config import training_enabled
+from firehose.models import IgnitionPoints
 
 if TYPE_CHECKING:
     # Workaround for circular imports as I can't be bothered refactoring
