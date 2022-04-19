@@ -12,15 +12,70 @@ from cell2fire.gym_env import FireEnv
 import os
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from firehose.models import ExperimentHelper, IgnitionPoints, IgnitionPoint
 import argparse
-
+import torch as th
+import gym
+from stable_baselines3.common.torch_layers import (
+    BaseFeaturesExtractor,
+    CombinedExtractor,
+    FlattenExtractor,
+    MlpExtractor,
+    NatureCNN,
+    create_mlp,
+)
+from stable_baselines3.common.preprocessing import get_action_dim, is_image_space, maybe_transpose, preprocess_obs
+from torch import nn
 from typing import Callable
 
 # TODO: make this global variable better
 set_training_enabled(True)
 num_cpu = 16
 
+
+class PaddedNatureCNN(BaseFeaturesExtractor):
+    """
+    CNN from DQN nature paper:
+        Mnih, Volodymyr, et al.
+        "Human-level control through deep reinforcement learning."
+        Nature 518.7540 (2015): 529-533.
+    :param observation_space:
+    :param features_dim: Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    """
+
+    def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 512):
+        super(PaddedNatureCNN, self).__init__(observation_space, features_dim)
+        # We assume CxHxW images (channels first)
+        # Re-ordering will be done by pre-preprocessing or wrapper
+        assert is_image_space(observation_space, check_channels=False), (
+            "You should use NatureCNN "
+            f"only with images not with {observation_space}\n"
+            "(you are probably using `CnnPolicy` instead of `MlpPolicy` or `MultiInputPolicy`)\n"
+            "If you are using a custom environment,\n"
+            "please check it using our env checker:\n"
+            "https://stable-baselines3.readthedocs.io/en/master/common/env_checker.html"
+        )
+        n_input_channels = observation_space.shape[0]
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=1, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # Compute shape by doing one forward pass
+        with th.no_grad():
+            n_flatten = self.cnn(th.as_tensor(observation_space.sample()[None]).float()).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        return self.linear(self.cnn(observations))
 
 def main(
     args,
@@ -68,12 +123,17 @@ def main(
     tf_logdir = f'{tf_logdir}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
     print(args.architecture)
+    if(args.architecture == "CnnPolicy"):
+        model_kwargs = {"features_extractor_class": PaddedNatureCNN}
+    else:
+        model_kwargs = {}
+
     if args.algo == "ppo":
-        model = PPO(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
+        model = PPO(args.architecture, env, features_extractor_class = PaddedNatureCNN, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
     elif args.algo == "a2c":
-        model = A2C(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
+        model = A2C(args.architecture, env, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
     elif args.algo == "trpo":
-        model = TRPO(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
+        model = TRPO(args.architecture, env, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
     elif args.algo == "random":
         model = RandomAlgorithm(
             args.architecture, env, verbose=1, tensorboard_log=tf_logdir
@@ -138,7 +198,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m",
         "--map",
-        default="Sub40x40",
+        default="Sub20x20",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
