@@ -19,7 +19,7 @@ MAP_TO_IGNITION_POINTS = {
     "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])
 }
 MAP_TO_EXTRA_KWARGS = {
-    "Sub40x40": {"steps_before_sim": 20, "steps_per_action": 3}
+    "Sub40x40": {"steps_before_sim": 30, "steps_per_action": 3}
 }
 
 

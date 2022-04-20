@@ -204,7 +204,8 @@ class FireEnv(Env):
             # print("State file:", state_file)
             print("Proc Error. Resetting state")
             raise NotImplementedError
-            return self.state, self.reward_func(self.state, self.forest_image), True, {}
+            return_state = self.get_observation()
+            return return_state, self.reward_func(self.state, self.forest_image), True, {}
         else:
             # Use last CSV as that is most recent forest
             state_file = csv_files[-1]

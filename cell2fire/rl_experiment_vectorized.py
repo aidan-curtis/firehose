@@ -25,7 +25,7 @@ num_cpu = 16
 
 def main(
     args,
-    total_timesteps=2_000_000,
+    total_timesteps=3_000_000,
     checkpoint_save_freq=int(2_000_000 / 100),
     should_eval=False,
 ):
@@ -91,10 +91,10 @@ def main(
     try:
         model.learn(total_timesteps=total_timesteps, callback=[checkpoint_callback])
     except Exception as e:
-        model.save(os.path.join(model_save_dir, "ppo_final.zip"))
+        model.save(os.path.join(model_save_dir, f"{args.algo}_final.zip"))
         raise e
 
-    model.save(os.path.join(model_save_dir, "ppo_final.zip"))
+    model.save(os.path.join(model_save_dir, f"{args.algo}_final.zip"))
     #####
     env.close()
 
