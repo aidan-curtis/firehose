@@ -11,6 +11,7 @@ from gym.spaces import Box, Discrete
 from firehose.config import training_enabled
 from firehose.models import ExperimentHelper, IgnitionPoints
 from firehose.process import Cell2FireProcess
+from firehose.rewards import FireSizeReward
 from firehose.utils import wait_until_file_populated
 
 _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -24,14 +25,6 @@ _IGNITION_COLOR = [255, 0, 255]  # pink
 
 def num_cells_on_fire(state):
     return np.sum(state > 0)
-
-
-def fire_size_reward(state, forest, scale=10):
-    """-(num cells on fire) / (total num cells in forest) * scale"""
-    # State is expected to be -1 (harvest), 0 (no fire), 1 (fire)
-    assert state.shape == forest.shape[:2]
-    fire_idxs = np.where(state > 0)
-    return -len(fire_idxs[0]) / (forest.shape[0] * forest.shape[1]) * scale
 
 
 class FireEnv(Env):
@@ -48,7 +41,7 @@ class FireEnv(Env):
         max_steps: int = 200,
         output_dir: str = _MODULE_DIR,
         ignition_points: Optional[IgnitionPoints] = None,
-        reward_func=fire_size_reward,
+        reward_func_cls=FireSizeReward,
         num_ignition_points: int = 1,  # if ignition_points is specified this is ignored
         steps_before_sim: int = 0,
         steps_per_action: int = 1,
@@ -63,7 +56,7 @@ class FireEnv(Env):
         :param max_steps: maximum number of steps
         :param output_dir: base output directory
         :param ignition_points: ignition points to use. If None, will generate random ones
-        :param reward_func: reward function
+        :param reward_func_cls: reward function class
         :param num_ignition_points: #ignition points to generate if not specified
         :param steps_before_sim: number of steps to run before allowing any actions
         :param steps_per_action: number of steps to run after each action
@@ -85,6 +78,7 @@ class FireEnv(Env):
         self.forest_image = self.helper.forest_image
         self.uforest_image = (self.forest_image * 255).astype("uint8")
         self.height, self.width = self.forest_image.shape[:2]
+        self.num_cells = self.height * self.width
 
         # Randomly generate ignition points if required
         if not ignition_points:
@@ -112,9 +106,6 @@ class FireEnv(Env):
         # Set initial state to be empty
         self.state = np.zeros((self.height, self.width), dtype=np.uint8)
 
-        # Reward function
-        self.reward_func = reward_func
-
         # Number of steps to progress simulation before applying any actions
         assert steps_before_sim >= 0
         self.steps_before_sim = steps_before_sim
@@ -141,6 +132,10 @@ class FireEnv(Env):
             yx: idx for idx, yx, in self.flatten_idx_to_yx.items()
         }
 
+        # Note: Reward function. Call this at end of __init__ just so we're safe
+        #  Reward function uses the env state, etc. to compute rewards.
+        self.reward_func = reward_func_cls(self)
+
         # Note: Cell2Fire Process. Call this at the end of __init__ once everything in
         #  env itself is setup!
         self.fire_process = Cell2FireProcess(env=self, verbose=verbose)
@@ -149,7 +144,7 @@ class FireEnv(Env):
         if self.action_type == "flat":
             # Flat discrete action space from (0 to number of pixels - 1)
             # We use 0-indexing here. This can be very high dimensional for large maps
-            self.action_space = Discrete((self.height * self.width) - 1)
+            self.action_space = Discrete(self.num_cells - 1)
         elif self.action_type == "xy":
             # Continuous action space for x and y. We round at evaluation time
             # Note: underlying it is y,x so it fits better with np array
@@ -275,7 +270,7 @@ class FireEnv(Env):
             print("Proc Error. Resetting state")
             raise NotImplementedError
             obs = self.get_observation()
-            reward = self.reward_func(self.state, self.forest_image)
+            reward = self.reward_func()
             return obs, reward, True, {}
         else:
             # Use last CSV as that is most recent forest
@@ -288,15 +283,14 @@ class FireEnv(Env):
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
 
-        # Note: call reward_func with self.state not return state!!!
-        reward = self.reward_func(self.state, self.forest_image)
+        reward = self.reward_func()
 
         # Check if we've exceeded max steps or Cell2Fire finished simulating
         done = self.iter >= self.max_steps or self.fire_process.finished
         if not self.verbose and not training_enabled():
             print(
                 f"\rStep {self.iter + 1}/{self.max_steps}. "
-                f"#Fire {num_cells_on_fire(self.state)}, ",
+                f"#Cells on Fire {num_cells_on_fire(self.state)}, ",
                 f"Reward: {reward}",
                 end="",
             )
