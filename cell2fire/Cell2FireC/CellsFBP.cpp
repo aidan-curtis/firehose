@@ -27,9 +27,9 @@ using namespace std;
 /*
 	Constructor   // WORKING CHECK OK
 */
-CellsFBP::CellsFBP(int _id, double _area, std::vector<int> _coord,  
-							int _fType, std::string _fType2, double _perimeter, 
-							int _status, std::unordered_map<std::string, int> & _adjacents, 
+CellsFBP::CellsFBP(int _id, double _area, std::vector<int> _coord,
+							int _fType, std::string _fType2, double _perimeter,
+							int _status, std::unordered_map<std::string, int> & _adjacents,
 							int _realId)
 {
 	// Global "dictionaries" (vectors) for status and types
@@ -39,13 +39,13 @@ CellsFBP::CellsFBP(int _id, double _area, std::vector<int> _coord,
 	this->StatusD[2] = "Burnt";
 	this->StatusD[3] = "Harvested";
 	this->StatusD[4] = "Non Fuel";
-	
+
 	// FTypeD: 0: "NonBurnable", 1: "Normal", 2: "Burnable
 	this->FTypeD[0] = "NonBurnable";
 	this->FTypeD[1] = "Normal";
 	this->FTypeD[2] = "Burnable";
-	
-	// Initialize fields of the Cell object 
+
+	// Initialize fields of the Cell object
     this->id = _id;
     this->area = _area;
     this->coord = _coord;
@@ -61,7 +61,7 @@ CellsFBP::CellsFBP(int _id, double _area, std::vector<int> _coord,
         std::cerr << "Cell ID=" << this->id << "Area=" <<  this->area <<  "Perimeter=" <<  this->perimeter << std::endl;
         // maybe raise runtime error
     }
-	
+
 	// Inner fields
     this->gMsgList = std::unordered_map<int, std::vector<int>>();
     this->hPeriod = 0;
@@ -70,7 +70,7 @@ CellsFBP::CellsFBP(int _id, double _area, std::vector<int> _coord,
     this->harvestStarts = 0;
     this->fireStartsSeason = 0;
     this->tYears = 4;
-	
+
     this->gMsgListSeason = std::unordered_map<int, std::vector<int>>();
     this->fireProgress = std::unordered_map<int, double>();
     this->angleDict = std::unordered_map<int, double>();
@@ -84,28 +84,28 @@ CellsFBP::CellsFBP(int _id, double _area, std::vector<int> _coord,
     Populates angles, distances, and initialize ROS per axis
     Modified by dlw to use cell area to compute distances in meters.
     ASSUME square fire cells.
-    
+
     Returns        void
-    
+
     Inputs:
     CoorCells      array of 2D int arrays
     AvailSet       int set
 */
 void CellsFBP::initializeFireFields(std::vector<std::vector<int>> & coordCells,    // TODO: should probably make a coordinate type
 												std::unordered_set<int> & availSet) 				// WORKING CHECK OK
-{  
+{
     for (auto & nb : this->adjacents) {
         // CP Default value is replaced: None = -1
 		//std::cout << "DEBUG1: adjacent: " << nb.second << std::endl;
         if (nb.second != -1) {
             int a = -1 * coordCells[nb.second - 1][0] + coordCells[this->id][0];
             int b = -1 * coordCells[nb.second - 1][1] + coordCells[this->id][1];
-            
+
             int angle = -1;
             if (a == 0) {
-                if (b >= 0) 
-                    angle = 270; 
-                else 
+                if (b >= 0)
+                    angle = 270;
+                else
                     angle = 90;
             }
             else if (b == 0) {
@@ -121,14 +121,14 @@ void CellsFBP::initializeFireFields(std::vector<std::vector<int>> & coordCells, 
                 double temp = std::atan(b * 1.0 / a) * radToDeg;
                 if (a > 0)
                     temp += 180;
-                if (a < 0 && b > 0) 
+                if (a < 0 && b > 0)
                     temp += 360;
                 angle = temp;
             }
 
             this->angleDict[nb.second] = angle;
             if (availSet.find(nb.second) != availSet.end()) {
-                // TODO: cannot be None, replaced None = -1   and ROSAngleDir has a double inside 
+                // TODO: cannot be None, replaced None = -1   and ROSAngleDir has a double inside
                 this->ROSAngleDir[angle] = -1;
             }
             this->angleToNb[angle] = nb.second;
@@ -138,8 +138,8 @@ void CellsFBP::initializeFireFields(std::vector<std::vector<int>> & coordCells, 
     }
 }
 
-        
-		
+
+
 /*
     New functions for calculating the ROS based on the fire angles
 	Distribute the rate of spread (ROS,ros) to the axes given in the AngleList.
@@ -154,16 +154,16 @@ void CellsFBP::initializeFireFields(std::vector<std::vector<int>> & coordCells, 
     Effect:
             Populate the ROSAngleDir, whose indexes are the angles,
             with ROS values.
-        
+
 	Returns       void
- */		
+ */
 void CellsFBP::ros_distr_old(double thetafire, double forward, double flank, double back) {   // WORKING CHECK OK
     for (auto & angle : this->ROSAngleDir) {
         double offset = std::abs(angle.first - thetafire);
-        
+
         double base = ((int)(offset)) / 90 * 90;
         double result;
-		
+
 		// Distribute ROS
 		if (offset >= 0 && offset <= 90) {
             result = this->allocate(offset, 0, forward, flank);
@@ -175,18 +175,18 @@ void CellsFBP::ros_distr_old(double thetafire, double forward, double flank, dou
             result = this->allocate(offset, 270, flank, forward);
         }
         this->ROSAngleDir[angle.first] = result;
-    }	
-}	
+    }
+}
 
 
 double CellsFBP::rhoTheta(double theta, double a, double b){
 	const double pi = 3.141592653589793;
-	
+
 	double c2, e, r1, r2, r;
-	
+
 	c2 = std::pow(a, 2) - std::pow(b, 2);
 	e = std::sqrt(c2) / a;
-	
+
 	r1 = a * (1 - std::pow(e, 2));
 	r2 = 1 - e * std::cos(theta * pi / 180.0);
 	r = r1 / r2;
@@ -194,24 +194,24 @@ double CellsFBP::rhoTheta(double theta, double a, double b){
 }
 
 void CellsFBP::ros_distr(double thetafire, double forward, double flank, double back, double EFactor) {   // WORKING CHECK OK
-    
-	// Ellipse points 
+
+	// Ellipse points
 	//std::cout << "Dentro de ROS dist" << std::endl;
 	//std::cout << "thetafire:" << thetafire << std::endl;
 	//std::cout << "forward:" << forward << std::endl;
 	//std::cout << "flank:" << flank << std::endl;
 	//std::cout << "back:" << back << std::endl;
 	//std::cout << "EFactor:" << EFactor << std::endl;
-	
-	
-	
+
+
+
 	//std::cout << "Previo Data" << std::endl;
 	double a = (forward + back) / 2;
 	double b;
 	std::vector<double> _x = {0.0, back, back, (forward + back) / 2., (forward + back) / 2., (forward + back)};
 	std::vector<double> _y = {0.0, std::pow(flank, 2) / a, - (std::pow(flank, 2) / a), flank, -flank, 0.0};
 	//std::cout << "Post data" << std::endl;
-	
+
 	// Fit the Ellipse
 	//std::cout << "Previo Ellipse" << std::endl;
 	Ellipse SqlEllipse(_x, _y);     // DEBUGGING
@@ -219,14 +219,14 @@ void CellsFBP::ros_distr(double thetafire, double forward, double flank, double 
 	std::vector<double> params = SqlEllipse.get_parameters();
 	a = params[0];
 	b = params[1];
-	
-	//std::cout << "a:" << a << std::endl; 
-	//std::cout << "b:" << b << std::endl; 
-	
+
+	//std::cout << "a:" << a << std::endl;
+	//std::cout << "b:" << b << std::endl;
+
 	// Ros allocation for each angle inside the dictionary
 	for (auto & angle : this->ROSAngleDir) {
         double offset = angle.first - thetafire;
-		
+
 		if (offset < 0) {
             offset += 360;
         }
@@ -234,19 +234,19 @@ void CellsFBP::ros_distr(double thetafire, double forward, double flank, double 
             offset -= 360;
         }
         this->ROSAngleDir[angle.first] = rhoTheta(offset, a, b) * EFactor;
-    }	
-}			
-		
+    }
+}
+
 
 /*
 	Returns      double
-	
+
 	Inputs:
 	offset       double
 	base         double
 	ros1         double
 	ros2         double
-*/	
+*/
 double CellsFBP::allocate(double offset, double base, double ros1, double ros2) {   // WORKING CHECK OK
     double d = (offset - base) / 90;
     return (1 - d) * ros1 + d * ros2;
@@ -255,7 +255,7 @@ double CellsFBP::allocate(double offset, double base, double ros1, double ros2) 
 
 /*
     Returns           vect[integers]   Important: we are sending a True sometimes, pick a special value -x for replacing it
-    
+
     Inputs:
     period            int
     AvailSet          int set
@@ -267,16 +267,16 @@ double CellsFBP::allocate(double offset, double base, double ros1, double ros2) 
     CoordCells        array of 2D doubles arrays
     Cells_Obj         dictionary of cells objects
 */
-        
-std::vector<int> CellsFBP::manageFire(int period, std::unordered_set<int> & AvailSet,      
-                                                          inputs * df_ptr, fuel_coefs * coef, 
-														  std::vector<std::vector<int>> & coordCells, std::unordered_map<int, CellsFBP> & Cells_Obj, 
+
+std::vector<int> CellsFBP::manageFire(int period, std::unordered_set<int> & AvailSet,
+                                                          inputs * df_ptr, fuel_coefs * coef,
+														  std::vector<std::vector<int>> & coordCells, std::unordered_map<int, CellsFBP> & Cells_Obj,
 														  arguments * args, weatherDF * wdf_ptr, std::vector<double> * FSCell,
-														  double randomROS) 
+														  double randomROS)
 	{
 	// Special flag for repetition (False = -99 for the record)
 	int repeat = -99;
-	
+
     // msg lists contains integers (True = -100)
     std::vector<int> msg_list_aux;
 	msg_list_aux.push_back(0);
@@ -285,8 +285,8 @@ std::vector<int> CellsFBP::manageFire(int period, std::unordered_set<int> & Avai
 	df_ptr->waz = wdf_ptr->waz;
 	df_ptr->ws = wdf_ptr->ws;
 	df_ptr->ffmc = wdf_ptr->ffmc;
-	df_ptr->bui = wdf_ptr->bui;	
-	
+	df_ptr->bui = wdf_ptr->bui;
+
 	// Compute main angle and ROSs: forward, flanks and back
     main_outs mainstruct;
     snd_outs sndstruct;
@@ -294,9 +294,11 @@ std::vector<int> CellsFBP::manageFire(int period, std::unordered_set<int> & Avai
 
 	// Calculate parameters
 	calculate(df_ptr, coef, &mainstruct, &sndstruct, &headstruct, &flankstruct, &backstruct);
-	
+
+	bool should_print = false;
+
 	/*  ROSs DEBUG!   */
-	if(args->verbose){
+	if(should_print && args->verbose){
 		std::cout << "*********** ROSs debug ************" << std::endl;
 		std::cout <<  "-------Input Structure--------" << std::endl;
 		std::cout <<  "fueltype: " << df_ptr->fueltype << std::endl;
@@ -376,12 +378,12 @@ std::vector<int> CellsFBP::manageFire(int period, std::unordered_set<int> & Avai
 		std::cout << "*********** ROSs debug ************" << std::endl;
 	}
 	/*                         */
-	
+
     double cartesianAngle = 270 - mainstruct.raz; //                 - 90;   // CHECK!!!!!
 	if (cartesianAngle < 0){
 		cartesianAngle += 360;
-	} 
-	 
+	}
+
     double ROSRV = 0;
     if (args->ROSCV > 0) {
 	    //std::srand(args->seed);
@@ -389,12 +391,12 @@ std::vector<int> CellsFBP::manageFire(int period, std::unordered_set<int> & Avai
 		//std::normal_distribution<double> distribution(0.0,1.0);
 		ROSRV = randomROS;
 	}
-	
+
 
 	// Display if verbose True (FBP ROSs, Main angle, and ROS std (if included))
-    if (args->verbose) {
+    if (should_print && args->verbose) {
         std::cout << "Main Angle (raz): " << mainstruct.raz  << " Cartesian: " << cartesianAngle << std::endl;
-        std::cout << "FBP Front ROS Value: " << headstruct.ros * args->HFactor << std::endl; 
+        std::cout << "FBP Front ROS Value: " << headstruct.ros * args->HFactor << std::endl;
         std::cout << "FBP Flanks ROS Value: " << flankstruct.ros * args->FFactor << std::endl;
         std::cout <<  "FBP Rear ROS Value: " << backstruct.ros * args->BFactor << std::endl;
         std::cout << "Std Normal RV for Stochastic ROS CV: " << ROSRV << std::endl;
@@ -402,54 +404,54 @@ std::vector<int> CellsFBP::manageFire(int period, std::unordered_set<int> & Avai
 
 	// If cell cannot send (thresholds), then it will be burned out in the main loop
     double HROS = (1 + args->ROSCV * ROSRV) * headstruct.ros * args->HFactor;
-    	
+
 	// Extra debug step for sanity checks
-	if (args->verbose){
+	if (should_print && args->verbose){
             std::cout << "\nSending message conditions" << std::endl;
             std::cout << "HROS: " << HROS << " Threshold: "<<  args->ROSThreshold << std::endl;
             std::cout << "HeadStruct FI: " << headstruct.fi << " Threshold: " << args->HFIThreshold << std::endl;
 	}
-	
-    // Check thresholds for sending messages	
+
+    // Check thresholds for sending messages
     if (HROS > args->ROSThreshold && headstruct.fi > args->HFIThreshold) {
         // True = -100
-		repeat = -100;	
-		
-		if (args->verbose) {
+		repeat = -100;
+
+		if (should_print && args->verbose) {
             std::cout << "\nRepeat condition: " << repeat << std::endl;
             std::cout << "Cell can send messages" << std::endl;
         }
-        
+
 		// ROS distribution method
         //ros_distr(mainstruct.raz,  headstruct.ros, flankstruct.ros, backstruct.ros);
 		//std::cout << "Entra a Ros Dist" << std::endl;
-		ros_distr(cartesianAngle,  
-					  headstruct.ros * args->HFactor, 
-					  flankstruct.ros * args->FFactor, 
+		ros_distr(cartesianAngle,
+					  headstruct.ros * args->HFactor,
+					  flankstruct.ros * args->FFactor,
 					  backstruct.ros * args->BFactor,
 					  args->EFactor);
-        //std::cout << "Sale de Ros Dist" << std::endl;		
-		
+        //std::cout << "Sale de Ros Dist" << std::endl;
+
 		// Fire progress using ROS from burning cell, not the neighbors //
        // vector<double> toPop = vector<double>();
-        
+
 		// this is a iterator through the keyset of a dictionary
         for (auto&  _angle : this->ROSAngleDir) {
             double angle = _angle.first;
             int nb = angleToNb[angle];
             double ros = (1 + args->ROSCV * ROSRV) * _angle.second;
-			
+
 			if(std::isnan(ros)){
 				ros = 1e-4;
 			}
-			
-            if (args->verbose) {
+
+            if (should_print && args->verbose) {
                 std::cout << "     (angle, realized ros in m/min): (" << angle << ", " << ros << ")" << std::endl;
             }
-			            
+
 			// Workaround PeriodLen in 60 minutes
             this->fireProgress[nb] += ros * args->FirePeriodLen;   // Updates fire progress
-		
+
 		    // If the message arrives to the adjacent cell's center, send a message
             if (this->fireProgress[nb] >= this->distToCenter[nb]) {
                 msg_list.push_back(nb);
@@ -463,19 +465,19 @@ std::vector<int> CellsFBP::manageFire(int period, std::unordered_set<int> & Avai
                     //fill out this verbose section
                     std::cout << "MSG list" << msg_list << std::endl;
                 }*/
-            }    
-        
-			// Info for debugging status of the cell and fire evolution			
+            }
+
+			// Info for debugging status of the cell and fire evolution
 			if (this->fireProgress[nb] < this->distToCenter[nb] && repeat == -100 && -100  != msg_list_aux[0]){
-                    if (args->verbose){
+                    if (should_print && args->verbose){
                         std::cout << "A Repeat = TRUE flag is sent in order to continue with the current fire....." << std::endl;
                         std::cout << "Main workaround of the new sim logic....." << std::endl;
 					}
                     msg_list_aux[0] = repeat;
 			}
-						
+
 		}
-		
+
 		if (args->verbose){
 			printf("fireProgress Dict: ");
 			for (auto & nb : this->fireProgress){
@@ -484,42 +486,44 @@ std::vector<int> CellsFBP::manageFire(int period, std::unordered_set<int> & Avai
 			std::cout << std::endl;
 		}
     }
-	
-	
+
+
 	// If original is empty (no messages but fire is alive if aux_list is not empty)
 	if  (msg_list.size() == 0){
 		if (msg_list_aux[0] == -100){
 			msg_list = msg_list_aux;
 		}
-	
+
 		else{
 			this->status = 2;   // we are done sending messages, call us burned
 		}
 	}
-				
-    if (args->verbose){
+
+    if (should_print && args->verbose){
 		std::cout << " ----------------- End of new manageFire function -----------------" << std::endl;
 	}
     return msg_list;
 }
-    
-		
+
+
 
 /*
 
-	Manage fire for BBO tuning version 
-	
+	Manage fire for BBO tuning version
+
 */
 
-std::vector<int> CellsFBP::manageFireBBO(int period, std::unordered_set<int> & AvailSet,      
-																  inputs * df_ptr, fuel_coefs * coef, 
-																  std::vector<std::vector<int>> & coordCells, std::unordered_map<int, CellsFBP> & Cells_Obj, 
+std::vector<int> CellsFBP::manageFireBBO(int period, std::unordered_set<int> & AvailSet,
+																  inputs * df_ptr, fuel_coefs * coef,
+																  std::vector<std::vector<int>> & coordCells, std::unordered_map<int, CellsFBP> & Cells_Obj,
 																  arguments * args, weatherDF * wdf_ptr, std::vector<double> * FSCell,
-																  double randomROS, std::vector<float> & EllipseFactors) 
+																  double randomROS, std::vector<float> & EllipseFactors)
 	{
+	bool should_print = false;
+
 	// Special flag for repetition (False = -99 for the record)
 	int repeat = -99;
-	
+
     // msg lists contains integers (True = -100)
     std::vector<int> msg_list_aux;
 	msg_list_aux.push_back(0);
@@ -528,8 +532,8 @@ std::vector<int> CellsFBP::manageFireBBO(int period, std::unordered_set<int> & A
 	df_ptr->waz = wdf_ptr->waz;
 	df_ptr->ws = wdf_ptr->ws;
 	df_ptr->ffmc = wdf_ptr->ffmc;
-	df_ptr->bui = wdf_ptr->bui;	
-	
+	df_ptr->bui = wdf_ptr->bui;
+
 	// Compute main angle and ROSs: forward, flanks and back
     main_outs mainstruct;
     snd_outs sndstruct;
@@ -537,9 +541,9 @@ std::vector<int> CellsFBP::manageFireBBO(int period, std::unordered_set<int> & A
 
 	// Calculate parameters
 	calculate(df_ptr, coef, &mainstruct, &sndstruct, &headstruct, &flankstruct, &backstruct);
-	
+
 	/*  ROSs DEBUG!   */
-	if(args->verbose){
+	if(should_print && args->verbose){
 		std::cout << "*********** ROSs debug ************" << std::endl;
 		std::cout <<  "-------Input Structure--------" << std::endl;
 		std::cout <<  "fueltype: " << df_ptr->fueltype << std::endl;
@@ -619,12 +623,12 @@ std::vector<int> CellsFBP::manageFireBBO(int period, std::unordered_set<int> & A
 		std::cout << "*********** ROSs debug ************" << std::endl;
 	}
 	/*                         */
-	
+
     double cartesianAngle = 270 - mainstruct.raz; //                 - 90;   // CHECK!!!!!
 	if (cartesianAngle < 0){
 		cartesianAngle += 360;
-	} 
-	 
+	}
+
     double ROSRV = 0;
     if (args->ROSCV > 0) {
 	    //std::srand(args->seed);
@@ -632,12 +636,12 @@ std::vector<int> CellsFBP::manageFireBBO(int period, std::unordered_set<int> & A
 		//std::normal_distribution<double> distribution(0.0,1.0);
 		ROSRV = randomROS;
 	}
-	
+
 
 	// Display if verbose True (FBP ROSs, Main angle, and ROS std (if included))
-    if (args->verbose) {
+    if (should_print && args->verbose) {
         std::cout << "Main Angle (raz): " << mainstruct.raz  << " Cartesian: " << cartesianAngle << std::endl;
-        std::cout << "FBP Front ROS Value: " << headstruct.ros * EllipseFactors[0] << std::endl; 
+        std::cout << "FBP Front ROS Value: " << headstruct.ros * EllipseFactors[0] << std::endl;
         std::cout << "FBP Flanks ROS Value: " << flankstruct.ros * EllipseFactors[1] << std::endl;
         std::cout <<  "FBP Rear ROS Value: " << backstruct.ros * EllipseFactors[2] << std::endl;
         std::cout << "Std Normal RV for Stochastic ROS CV: " << ROSRV << std::endl;
@@ -645,50 +649,50 @@ std::vector<int> CellsFBP::manageFireBBO(int period, std::unordered_set<int> & A
 
 	// If cell cannot send (thresholds), then it will be burned out in the main loop
     double HROS = (1 + args->ROSCV * ROSRV) * headstruct.ros * EllipseFactors[0];
-    	
+
 	// Extra debug step for sanity checks
-	if (args->verbose){
+	if (should_print && args->verbose){
             std::cout << "\nSending message conditions" << std::endl;
             std::cout << "HROS: " << HROS << " Threshold: "<<  args->ROSThreshold << std::endl;
             std::cout << "HeadStruct FI: " << headstruct.fi << " Threshold: " << args->HFIThreshold << std::endl;
 	}
-	
-    // Check thresholds for sending messages	
+
+    // Check thresholds for sending messages
     if (HROS > args->ROSThreshold && headstruct.fi > args->HFIThreshold) {
         // True = -100
-		repeat = -100;	
-		
-		if (args->verbose) {
+		repeat = -100;
+
+		if (should_print && args->verbose) {
             std::cout << "\nRepeat condition: " << repeat << std::endl;
             std::cout << "Cell can send messages" << std::endl;
         }
-        
+
 		// ROS distribution method
         //ros_distr(mainstruct.raz,  headstruct.ros, flankstruct.ros, backstruct.ros);
 		//std::cout << "Entra a Ros Dist" << std::endl;
-		ros_distr(cartesianAngle,  
-					  headstruct.ros * EllipseFactors[0], 
-					  flankstruct.ros * EllipseFactors[1], 
+		ros_distr(cartesianAngle,
+					  headstruct.ros * EllipseFactors[0],
+					  flankstruct.ros * EllipseFactors[1],
 					  backstruct.ros * EllipseFactors[2],
 					  EllipseFactors[3]);
-        //std::cout << "Sale de Ros Dist" << std::endl;		
-		
+        //std::cout << "Sale de Ros Dist" << std::endl;
+
 		// Fire progress using ROS from burning cell, not the neighbors //
        // vector<double> toPop = vector<double>();
-        
+
 		// this is a iterator through the keyset of a dictionary
         for (auto&  _angle : this->ROSAngleDir) {
             double angle = _angle.first;
             int nb = angleToNb[angle];
             double ros = (1 + args->ROSCV * ROSRV) * _angle.second;
-			
-            if (args->verbose) {
+
+            if (should_print && args->verbose) {
                 std::cout << "     (angle, realized ros in m/min): (" << angle << ", " << ros << ")" << std::endl;
             }
-			            
+
 			// Workaround PeriodLen in 60 minutes
             this->fireProgress[nb] += ros * args->FirePeriodLen;   // Updates fire progress
-		
+
 		    // If the message arrives to the adjacent cell's center, send a message
             if (this->fireProgress[nb] >= this->distToCenter[nb]) {
                 msg_list.push_back(nb);
@@ -702,20 +706,20 @@ std::vector<int> CellsFBP::manageFireBBO(int period, std::unordered_set<int> & A
                     //fill out this verbose section
                     std::cout << "MSG list" << msg_list << std::endl;
                 }*/
-            }    
-        
-			// Info for debugging status of the cell and fire evolution			
+            }
+
+			// Info for debugging status of the cell and fire evolution
 			if (this->fireProgress[nb] < this->distToCenter[nb] && repeat == -100 && -100  != msg_list_aux[0]){
-                    if (args->verbose){
+                    if (should_print && args->verbose){
                         std::cout << "A Repeat = TRUE flag is sent in order to continue with the current fire....." << std::endl;
                         std::cout << "Main workaround of the new sim logic....." << std::endl;
 					}
                     msg_list_aux[0] = repeat;
 			}
-						
+
 		}
-		
-		if (args->verbose){
+
+		if (should_print && args->verbose){
 			printf("fireProgress Dict: ");
 			for (auto & nb : this->fireProgress){
 				std::cout << " " << nb.first << " : " << nb.second;
@@ -723,33 +727,33 @@ std::vector<int> CellsFBP::manageFireBBO(int period, std::unordered_set<int> & A
 			std::cout << std::endl;
 		}
     }
-	
-	
+
+
 	// If original is empty (no messages but fire is alive if aux_list is not empty)
 	if  (msg_list.size() == 0){
 		if (msg_list_aux[0] == -100){
 			msg_list = msg_list_aux;
 		}
-	
+
 		else{
 			this->status = 2;   // we are done sending messages, call us burned
 		}
 	}
-				
-    if (args->verbose){
+
+    if (should_print && args->verbose){
 		std::cout << " ----------------- End of new manageFire function -----------------" << std::endl;
 	}
     return msg_list;
 }
-    
 
 
-		
+
+
 /*
     Get burned new logic: Checks if the ROS on its side is above a threshold for burning
-	
-	Returns     boolean  
-    
+
+	Returns     boolean
+
     Inputs:
     period      int
     NMsg        int
@@ -759,9 +763,11 @@ std::vector<int> CellsFBP::manageFireBBO(int period, std::unordered_set<int> & A
     coef        pointer
     ROSThresh   double
  */
-	
+
 bool CellsFBP::get_burned(int period, int season, int NMsg, inputs df[],  fuel_coefs * coef, arguments * args, weatherDF * wdf_ptr) {
-    if (args->verbose) { 
+    bool should_print = false;
+
+    if (should_print && args->verbose) {
         std::cout << "ROS Threshold get_burned method" << std::endl;
 		std::cout << "ROSThreshold: " << args->ROSThreshold << std::endl;
     }
@@ -775,16 +781,16 @@ bool CellsFBP::get_burned(int period, int season, int NMsg, inputs df[],  fuel_c
 	df[this->id].waz = wdf_ptr->waz;
 	df[this->id].ws = wdf_ptr->ws;
 	df[this->id].ffmc = wdf_ptr->ffmc;
-	df[this->id].bui = wdf_ptr->bui;	
+	df[this->id].bui = wdf_ptr->bui;
     calculate(&(df[this->id]), coef, &mainstruct, &sndstruct, &headstruct, &flankstruct, &backstruct);
 
-    if (args->verbose) { 
+    if (should_print && args->verbose) {
 		std::cout << "\nMain Angle :" << mainstruct.raz << std::endl;
 		std::cout << "Front ROS Value :" << headstruct.ros * args->HFactor << std::endl;
 		std::cout << "Flanks ROS Value :" << flankstruct.ros * args->FFactor << std::endl;
 		std::cout << "Rear ROS Value :" << backstruct.ros * args->BFactor << std::endl;
 	}
-    
+
 	// Check a threshold for the ROS
     if (headstruct.ros  * args->HFactor > args->ROSThreshold) {
         this->status = 1;
@@ -794,15 +800,15 @@ bool CellsFBP::get_burned(int period, int season, int NMsg, inputs df[],  fuel_c
         return true;
     }
     // Not burned
-    return false; 
+    return false;
 }
 
 
-		
+
 /* Old functions
     Returns            void
-    
-    Inputs:  
+
+    Inputs:
     AdjacentCells      dictionary{string:[array integers]}
 */
 void CellsFBP::set_Adj(std::unordered_map<std::string, int> & adjacentCells) {   // WORKING CHECK OK
@@ -811,10 +817,10 @@ void CellsFBP::set_Adj(std::unordered_map<std::string, int> & adjacentCells) {  
 }
 
 
-/* 
+/*
     Returns            void
-    
-    Inputs:  
+
+    Inputs:
     Status_int         int
 */
 void CellsFBP::setStatus(int status_int) {   // WORKING CHECK OK
@@ -824,18 +830,18 @@ void CellsFBP::setStatus(int status_int) {   // WORKING CHECK OK
 
 /*
     Returns            string
-    
-    Inputs:  
+
+    Inputs:
 */
 std::string CellsFBP::getStatus() {		// WORKING CHECK OK
     // Return cell's status
     return this->StatusD[this->status];
 }
 
-		
+
 /*
     Returns           boolean
-    
+
     Inputs:
     period            int
     Season            int
@@ -847,7 +853,8 @@ std::string CellsFBP::getStatus() {		// WORKING CHECK OK
  */
 bool CellsFBP::ignition(int period, int year, std::vector<int> & ignitionPoints, inputs * df_ptr,   // WORKING CHECK OK
 								 fuel_coefs * coef, arguments *args, weatherDF * wdf_ptr) {
-    
+    bool should_print = false;
+
 	// If we have ignition points, update
     if (ignitionPoints.size() > 0) {
         this->status = 1;
@@ -865,25 +872,25 @@ bool CellsFBP::ignition(int period, int year, std::vector<int> & ignitionPoints,
 
 		//printf("\nWeather inside ignition:\n");
 		//std::cout << "waz: " << wdf_ptr->waz << "  ffmc: " <<    wdf_ptr->ffmc << "  bui: " <<   wdf_ptr->bui << std::endl;
-		
+
 		df_ptr->waz = wdf_ptr->waz;
 		df_ptr->ws = wdf_ptr->ws;
 		df_ptr->ffmc = wdf_ptr->ffmc;
-		df_ptr->bui = wdf_ptr->bui;	
-			
+		df_ptr->bui = wdf_ptr->bui;
+
         calculate(df_ptr, coef, &mainstruct, &sndstruct, &headstruct, &flankstruct, &backstruct);
 
-        if (args->verbose) {
+        if (should_print && args->verbose) {
 			std::cout << "\nIn ignition function" << std::endl;
 			std::cout << "Main Angle: " << mainstruct.raz << std::endl;
 			std::cout << "Front ROS Value: " << headstruct.ros * args->HFactor << std::endl;
 			std::cout << "Flanks ROS Value: " << flankstruct.ros * args->FFactor << std::endl;
 			std::cout << "Rear ROS Value: " << backstruct.ros * args->BFactor << std::endl;
         }
-		
+
 		// Check a threshold for the ROS
         if (headstruct.ros * args->HFactor > args->ROSThreshold && headstruct.fi > args->HFIThreshold) {
-            if (args->verbose) {
+            if (should_print && args->verbose) {
                 std::cout << "Head (ROS, FI) values of: (" << headstruct.ros * args->HFactor<< ", " << headstruct.fi  <<  ") are enough for ignition" << std::endl;
             }
 
@@ -896,10 +903,10 @@ bool CellsFBP::ignition(int period, int year, std::vector<int> & ignitionPoints,
         }
         return false;
     }
-}		
-		
-		
-		
+}
+
+
+
 /*
     Returns      void
     Inputs
@@ -924,7 +931,7 @@ void CellsFBP::print_info() {    // WORKING CHECK OK
     std::cout << "Status = " << this->StatusD[this->status] << std::endl;
     std::cout << "Coordinates: ";
 	std::cout << this->coord[0] <<  " " << this->coord[1]  << std::endl;
-	
+
 	std::cout << "Area = "<<  this->area << std::endl;
     std::cout << "FTypes = "<< this->FTypeD[this->fType] << std::endl;
     std::cout << "AdjacentCells:";
@@ -932,34 +939,34 @@ void CellsFBP::print_info() {    // WORKING CHECK OK
 		std::cout << " " << nb.first << ":" << nb.second;
 	}
 	std::cout << std::endl;
-	
+
 	printf("Angle Dict: ");
 	for (auto & nb : this->angleDict){
 		std::cout << " " << nb.first << " : " << nb.second;
 	}
 	std::cout << std::endl;
-	
+
 	printf("Ros Angle Dict: ");
 	for (auto & nb : this->ROSAngleDir){
 		std::cout << " " << nb.first << " : " << nb.second;
 	}
 	std::cout << std::endl;
-	
-	
+
+
 	printf("angleToNb Dict: ");
 	for (auto & nb : this->angleToNb){
 		std::cout << " " << nb.first << " : " << nb.second;
 	}
 	std::cout << std::endl;
-	
-	
+
+
 	printf("fireProgress Dict: ");
 	for (auto & nb : this->fireProgress){
 		std::cout << " " << nb.first << " : " << nb.second;
 	}
 	std::cout << std::endl;
-	
-	
+
+
 	printf("distToCenter Dict: ");
 	for (auto & nb : this->distToCenter){
 		std::cout << " " << nb.first << " : " << nb.second;

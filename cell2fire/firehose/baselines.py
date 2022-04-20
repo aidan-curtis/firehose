@@ -26,6 +26,11 @@ class Algorithm(ABC):
         pass
 
 
+class NoAlgorithm(Algorithm):
+    def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
+        return -1, None
+
+
 class HumanInputAlgorithm(Algorithm):
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
         human_actions_str = input("Input actions:")

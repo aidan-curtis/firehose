@@ -7,6 +7,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
+from evaluate_model import MAP_TO_IGNITION_POINTS, MAP_TO_EXTRA_KWARGS
 from firehose.config import set_training_enabled
 from cell2fire.gym_env import FireEnv
 import os
@@ -47,12 +48,13 @@ def main(
     )
 
     if args.ignition_type == "fixed":
-        ig_points = IgnitionPoints([IgnitionPoint(idx=200, year=1, x=0, y=0)])
+        ig_points = MAP_TO_IGNITION_POINTS[args.map]
         single_env = lambda: FireEnv(
             ignition_points=ig_points,
             action_type=args.action_space,
             fire_map=args.map,
             output_dir=outdir,
+            **MAP_TO_EXTRA_KWARGS[args.map],
         )
     elif args.ignition_type == "random":
         single_env = lambda: FireEnv(
@@ -74,14 +76,6 @@ def main(
         model = A2C(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
     elif args.algo == "trpo":
         model = TRPO(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
-    elif args.algo == "random":
-        model = RandomAlgorithm(
-            args.architecture, env, verbose=1, tensorboard_log=tf_logdir
-        )
-    elif args.algo == "naive":
-        model = NaiveAlgorithm(
-            args.architecture, env, verbose=1, tensorboard_log=tf_logdir
-        )
     elif args.algo == "dqn":
         model = DQN(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
     else:

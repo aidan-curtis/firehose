@@ -8,10 +8,19 @@ from sb3_contrib import TRPO
 from stable_baselines3 import A2C, PPO
 
 from cell2fire.gym_env import FireEnv
-from firehose.baselines import HumanInputAlgorithm, NaiveAlgorithm, RandomAlgorithm
+from firehose.baselines import HumanInputAlgorithm, NaiveAlgorithm, RandomAlgorithm, NoAlgorithm
 from firehose.config import set_debug_mode
+from firehose.models import IgnitionPoints, IgnitionPoint
 
-_NO_MODEL_ALGOS = {"random", "naive", "human"}
+_NO_MODEL_ALGOS = {"random", "naive", "human", "none"}
+
+
+MAP_TO_IGNITION_POINTS = {
+    "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])
+}
+MAP_TO_EXTRA_KWARGS = {
+    "Sub40x40": {"steps_before_sim": 20, "steps_per_action": 3}
+}
 
 
 def main(args):
@@ -26,10 +35,9 @@ def main(args):
         fire_map=args.map,
         output_dir=outdir,
         max_steps=500,
-        # ignition_points=IgnitionPoints([IgnitionPoint(370, 1)]),
-        steps_before_sim=50,
-        steps_per_action=5,
+        ignition_points=MAP_TO_IGNITION_POINTS.get(args.map, None),
         verbose=True,
+        **MAP_TO_EXTRA_KWARGS.get(args.map, {"steps_before_sim": 50, "steps_per_action": 10}),
     )
 
     if args.algo not in _NO_MODEL_ALGOS:
@@ -47,6 +55,8 @@ def main(args):
         model = NaiveAlgorithm(env)
     elif args.algo == "human":
         model = HumanInputAlgorithm(env)
+    elif args.algo == "none":
+        model = NoAlgorithm(env)
     else:
         raise NotImplementedError
 
@@ -54,7 +64,7 @@ def main(args):
     if not os.path.exists("videos"):
         os.mkdir("videos")
 
-    video_fname = f"videos/{args.algo}-{date_str}.mp4"
+    video_fname = f"videos/{date_str}-{args.algo}.mp4"
     if not args.disable_video:
         video_recorder = VideoRecorder(env, video_fname, enabled=True)
 
@@ -73,6 +83,7 @@ def main(args):
 
     if not args.disable_video:
         video_recorder.close()
+        os.remove(video_recorder.metadata_path)
     print("Done!")
 
 
@@ -83,12 +94,12 @@ if __name__ == "__main__":
         "--algo",
         default="naive",
         help="Specifies the RL algorithm to use",
-        choices={"human", "random", "naive", "ppo", "a2c", "trpo"},
+        choices={"human", "random", "naive", "none", "ppo", "a2c", "trpo"},
     )
     parser.add_argument(
         "-m",
         "--map",
-        default="Sub20x20",
+        default="Sub40x40",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
@@ -110,6 +121,6 @@ if __name__ == "__main__":
         choices={"fixed", "random"},
     )
     print("Args:", json.dumps(vars(parser.parse_args()), indent=2))
-    set_debug_mode(True)
+    # set_debug_mode(True)
 
     main(args=parser.parse_args())
