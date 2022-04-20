@@ -1542,14 +1542,14 @@ int main(int argc, char * argv[]){
                     Forest.Step(generator, rnumber, rnumber2, rnumber3);
                     // printf("\nDone: %d", Forest.done);
 
+                    tstep = tstep + 1;
+
                     // TODO: willshen@ check weather is not run out or loop around it
                     if (Forest.done) {
                         //DEBUGprintf("\n Done = True!, break \n");
                         stop = 1;
                         break;
                     }
-
-                    tstep = tstep + 1;
 
                     // Max number of steps exceeded
                     if (tstep > Forest.args.MaxFirePeriods * Forest.args.TotalYears) {
