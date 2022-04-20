@@ -1,7 +1,7 @@
 import subprocess
 from typing import TYPE_CHECKING, List, Optional, Union
 
-from cell2fire.firehose.config import training_enabled
+from firehose.config import debug_mode, training_enabled
 from firehose.models import IgnitionPoints
 
 if TYPE_CHECKING:
@@ -30,11 +30,15 @@ class Cell2FireProcess:
         self.process: Optional[subprocess.Popen] = None
         self.verbose = verbose
 
+        # Lines that have been read from the process
+        self.lines: List[str] = []
+
         # Simulation (i.e. process) is finished
         self.finished: bool = False
 
     def get_command_str(self) -> str:
-        format_str = _VERBOSE_COMMAND_STR if self.verbose else _COMMAND_STR
+        # Use debug_mode config rather than verbose
+        format_str = _VERBOSE_COMMAND_STR if debug_mode() else _COMMAND_STR
         return format_str.format(
             binary=self.env.helper.binary_path,
             input=self.env.helper.tmp_input_folder,
@@ -60,22 +64,39 @@ class Cell2FireProcess:
         self._spawn_count += 1
 
     def read_line(self) -> str:
-        return self.process.stdout.readline().strip().decode("utf-8")
+        line = self.process.stdout.readline().strip().decode("cp1252")
+        self.lines.append(line)
+        return line
 
-    def progress_to_next_state(self):
+    def progress_to_next_state(self) -> List[str]:
+        """Move to next state and return any CSV state files"""
         # Step the process until we reach an input action line
         result = ""
+        csv_lines = []
         while result != "Input action":
             result = self.read_line()
+            if result == "" and self.process.poll() is not None:
+                # Process has finished
+                assert self.finished, "Process finished but not marked as finished"
+                break
+
             if self.verbose:
                 print(result)
+
+            if (
+                ".csv" in result
+                and "Forest" in result
+                and "We are plotting" not in result
+            ):
+                csv_lines.append(result)
 
             # Cell2Fire finished the simulation - break out of the loop
             if "Total Harvested Cells" in result:
                 if not training_enabled():
                     print("Cell2Fire finished the simulation")
                 self.finished = True
-                break
+
+        return csv_lines
 
     def apply_actions(self, actions: Union[int, List[int]]):
         if not isinstance(actions, list):

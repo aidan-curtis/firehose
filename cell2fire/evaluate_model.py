@@ -7,9 +7,9 @@ from gym.wrappers.monitoring.video_recorder import VideoRecorder
 from sb3_contrib import TRPO
 from stable_baselines3 import A2C, PPO
 
-from cell2fire.gym_env import FireEnv, num_cells_on_fire
+from cell2fire.gym_env import FireEnv
 from firehose.baselines import HumanInputAlgorithm, NaiveAlgorithm, RandomAlgorithm
-from firehose.models import IgnitionPoint, IgnitionPoints
+from firehose.config import set_debug_mode
 
 _NO_MODEL_ALGOS = {"random", "naive", "human"}
 
@@ -28,7 +28,8 @@ def main(args):
         max_steps=500,
         # ignition_points=IgnitionPoints([IgnitionPoint(370, 1)]),
         steps_before_sim=50,
-        steps_per_action=1,
+        steps_per_action=5,
+        verbose=True,
     )
 
     if args.algo not in _NO_MODEL_ALGOS:
@@ -50,8 +51,12 @@ def main(args):
         raise NotImplementedError
 
     date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    if not os.path.exists("videos"):
+        os.mkdir("videos")
+
+    video_fname = f"videos/{args.algo}-{date_str}.mp4"
     if not args.disable_video:
-        video_recorder = VideoRecorder(env, f"{args.algo}-{date_str}.mp4", enabled=True)
+        video_recorder = VideoRecorder(env, video_fname, enabled=True)
 
     obs = env.reset()
     env.render()
@@ -59,7 +64,7 @@ def main(args):
     done = False
     while not done:
         action, _states = model.predict(obs, deterministic=True)
-        obs, reward, done, info = env.step(action, debug=True)
+        obs, reward, done, info = env.step(action)
         env.render()
         if not args.disable_video:
             video_recorder.capture_frame()
@@ -87,7 +92,9 @@ if __name__ == "__main__":
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
-        "-p", "--model_path", help="Specifies the path to the model to evaluate",
+        "-p",
+        "--model_path",
+        help="Specifies the path to the model to evaluate",
     )
     parser.add_argument(
         "-as", "--action_space", default="flat", help="Action space type"
@@ -103,4 +110,6 @@ if __name__ == "__main__":
         choices={"fixed", "random"},
     )
     print("Args:", json.dumps(vars(parser.parse_args()), indent=2))
+    set_debug_mode(True)
+
     main(args=parser.parse_args())

@@ -10,7 +10,7 @@ import pandas as pd
 from gym import Env, spaces
 from gym.spaces import Box, Discrete
 
-from cell2fire.firehose.config import training_enabled
+from firehose.config import training_enabled
 from firehose.models import ExperimentHelper, IgnitionPoint, IgnitionPoints
 from firehose.process import Cell2FireProcess
 from firehose.utils import wait_until_file_populated
@@ -183,21 +183,31 @@ class FireEnv(Env):
                 print(f"Converted action: {action}")
 
         # Code crashes for some reason when action == ignition point
-        for ignition_point in self.ignition_points.points:
-            if ignition_point.idx == action + 1:
-                action = random.choice([action + 1, action - 1])
+        # for ignition_point in self.ignition_points.points:
+        #     if ignition_point.idx == action + 1:
+        #         print("action selected is ignition point hmm")
+        #         # action = random.choice([action + 1, action - 1])
 
         # IMPORTANT! Actions must be indexed from 0. The Cell2FireProcess class will
         # handle the indexing when calling Cell2Fire
         self.fire_process.apply_actions(action)
 
-        state_file = self.fire_process.read_line()
-
-        if not state_file.endswith(".csv"):
+        # Progress fire process to next state
+        csv_files = self.fire_process.progress_to_next_state()
+        if not csv_files:
+            assert (
+                not self.fire_process.finished
+            ), "Fire process finished but no csv files"
+            # No state and Cell2Fire didn't finish, so something went wrong
             print(action)
-            print("State file:", state_file)
+            print("CSV files are empty")
+            # print("State file:", state_file)
             print("Proc Error. Resetting state")
+            raise NotImplementedError
             return self.state, self.reward_func(self.state, self.forest_image), True, {}
+        else:
+            # Use last CSV as that is most recent forest
+            state_file = csv_files[-1]
 
         # Bad Hack
         # FIXME: if multiple CSVs are returned for each step, then we only take the
@@ -205,9 +215,6 @@ class FireEnv(Env):
         wait_until_file_populated(state_file)
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
-
-        # Progress fire process to next state
-        self.fire_process.progress_to_next_state()
 
         # Check if we've exceeded max steps or Cell2Fire finished simulating
         done = self.iter >= self.max_steps or self.fire_process.finished

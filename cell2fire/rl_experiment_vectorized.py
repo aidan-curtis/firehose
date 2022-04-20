@@ -7,7 +7,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-from cell2fire.firehose.config import set_training_enabled
+from firehose.config import set_training_enabled
 from cell2fire.gym_env import FireEnv
 import os
 from stable_baselines3.common.monitor import Monitor
