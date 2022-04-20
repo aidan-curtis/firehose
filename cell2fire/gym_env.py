@@ -30,6 +30,7 @@ def num_cells_on_fire(state):
 
 
 def fire_size_reward(state, forest, scale=10):
+    assert state.shape == forest.shape[:2]
     idxs = np.where(state > 0)
     return -len(idxs[0]) / (forest.shape[0] * forest.shape[1]) * scale
 
@@ -113,6 +114,12 @@ class FireEnv(Env):
         self.steps_per_action = steps_per_action
 
         self.verbose = verbose
+
+        height, width = self.forest_image.shape[:2]
+        self.flatten_idx_to_yx = {
+            x + y * width: (y, x) for x in range(width) for y in range(height)
+        }
+        self.flatten_yx_to_idx = {b: a for a, b, in self.flatten_idx_to_yx.items()}
 
         # Note: Cell2Fire Process. Call this at the end of __init__!
         self.fire_process = Cell2FireProcess(self, verbose)
@@ -230,7 +237,8 @@ class FireEnv(Env):
 
         self.iter += 1
         return_state = self.get_observation()
-        return return_state, self.reward_func(return_state, self.forest_image), done, {}
+        # Note: call reward_func with state not return state!!!
+        return return_state, self.reward_func(self.state, self.forest_image), done, {}
 
     def get_painted_image(self):
         im = copy.copy(self.uforest_image)
