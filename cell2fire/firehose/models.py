@@ -17,8 +17,8 @@ _NO_FUEL_STR: str = "NFnfuel"
 class IgnitionPoint:
     idx: int
     year: int
-    x: int = -1  # column
-    y: int = -1  # row
+    x: int = -1  # column (0 indexed)
+    y: int = -1  # row (0 indexed)
 
 
 @dataclass(frozen=True)
