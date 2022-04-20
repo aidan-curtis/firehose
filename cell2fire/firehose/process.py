@@ -11,11 +11,14 @@ if TYPE_CHECKING:
 _COMMAND_STR = "{binary} --input-instance-folder {input} --output-folder {output} --ignitions --sim-years {sim_years} \
 --nsims 1 --grids --final-grid --Fire-Period-Length 1.0 --output-messages \
 --weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad {ignition_radius} --seed 123 --nthreads 1 \
---ROS-Threshold 0.1 --HFI-Threshold 0.1 --steps-action {steps_per_action} --steps-before {steps_before_sim}"
-# Doesn't seem like its needed as we feed actions manually
-# --HarvestPlan"
+--ROS-Threshold 0.1 --HFI-Threshold 0.1 --steps-action {steps_per_action} --steps-before {steps_before_sim} \
+--HarvestPlan"
 
-_VERBOSE_COMMAND_STR = _COMMAND_STR + " --verbose"
+_VERBOSE_COMMAND_STR = "{binary} --input-instance-folder {input} --output-folder {output} --ignitions --sim-years {sim_years} \
+--nsims 1 --grids --final-grid --Fire-Period-Length 1.0 --output-messages \
+--weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad {ignition_radius} --seed 123 --nthreads 1 \
+--ROS-Threshold 0.1 --HFI-Threshold 0.1 --steps-action {steps_per_action} --steps-before {steps_before_sim} --verbose \
+--HarvestPlan"
 
 
 class Cell2FireProcess:
