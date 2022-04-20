@@ -1,7 +1,7 @@
 # firehose
 ![good-coverage](https://img.shields.io/badge/coverage-101%25-brightgreen)
 
-We are trying to put out` big fires
+We are trying to put out big fires
 
 ![fine](./figs/giphy.gif)
 
@@ -23,7 +23,14 @@ Use a virtual environment it'll make your life easier
 python cell2fire/gym_env.py
 ```
 
-## Train a PPO agent
+## Evaluate the naive policy
+This writes a video to a `videos/` folder that will be created
 ```
-python cell2fire/rl_experiment.py
+python cell2fire/evaluate_model.py --algo naive
 ```
+
+## Train RL agents parallelized
+```
+python cell2fire/rl_experiment_vectorized.py
+```
+

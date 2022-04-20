@@ -17,8 +17,8 @@ _NO_FUEL_STR: str = "NFnfuel"
 class IgnitionPoint:
     idx: int
     year: int
-    x: int = -1  # column
-    y: int = -1  # row
+    x: int = -1  # column (0 indexed)
+    y: int = -1  # row (0 indexed)
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,9 @@ class IgnitionPoints:
     # all ignition points. 0 is default used in parser.
     RADIUS: ClassVar[int] = 0
     CSV_NAME: ClassVar[str] = "Ignitions.csv"
+
+    def __len__(self):
+        return len(self.points)
 
     @property
     def year(self) -> int:

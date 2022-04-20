@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Any, Set, Tuple
 
 import numpy as np
-from gym.spaces import Discrete
 from gym_env import FireEnv
 
 
@@ -26,12 +25,32 @@ class Algorithm(ABC):
         pass
 
 
-class NoAlgorithm(Algorithm):
+class RandomAlgorithm(Algorithm):
+    """Randomly select actions with duplicates"""
+
+    def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
+        return self.env.action_space.sample(), None
+
+
+class FlatActionSpaceAlgorithm(Algorithm, ABC):
+    def __init__(self, env: FireEnv):
+        if env.action_type != "flat":
+            raise ValueError(
+                f"{self.__class__.__name__} only supports flat action space"
+            )
+        super().__init__(env)
+
+
+class NoAlgorithm(FlatActionSpaceAlgorithm):
+    """Algorithm that is basically no-op"""
+
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
         return -1, None
 
 
-class HumanInputAlgorithm(Algorithm):
+class HumanInputAlgorithm(FlatActionSpaceAlgorithm):
+    """Read in human input from stdin"""
+
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
         human_actions_str = input("Input actions:")
         human_actions = [int(act) for act in human_actions_str.split()]
@@ -39,17 +58,17 @@ class HumanInputAlgorithm(Algorithm):
         return human_actions[0], None
 
 
-class RandomAlgorithm(Algorithm):
-    def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
-        return self.env.action_space.sample(), None
+class NaiveAlgorithm(FlatActionSpaceAlgorithm):
+    """
+    The Naive algorithm selects the cell that is on fire that is closest to the
+    ignition point in terms of Euclidean distance.
 
+    If cells have already been put out, then it will not consider them.
+    If there are no cells on fire, then it will return -1 (no-op).
+    """
 
-class NaiveAlgorithm(Algorithm):
     def __init__(self, env: FireEnv):
-        if not isinstance(env.action_space, Discrete):
-            raise ValueError("Naive algorithm only supports discrete action spaces")
         super().__init__(env)
-
         self.prev_actions: Set[int] = {-1}
 
         assert (
@@ -57,14 +76,8 @@ class NaiveAlgorithm(Algorithm):
         ), "Only 1 ignition point supported for naive algorithm"
         self.ignition_point = env.ignition_points.points[0]
 
-        height, width = env.forest_image.shape[:2]
-        self.flatten_idx_to_yx = {
-            x + y * width: (y, x) for x in range(width) for y in range(height)
-        }
-        self.flatten_yx_to_idx = {b: a for a, b, in self.flatten_idx_to_yx.items()}
-
         # subtract 1 to convert to 0-indexed
-        self.ignition_point_yx = self.flatten_idx_to_yx[self.ignition_point.idx - 1]
+        self.ignition_point_yx = self.env.flatten_idx_to_yx[self.ignition_point.idx - 1]
 
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
         cells_on_fire = self.env.state == 1
@@ -85,7 +98,7 @@ class NaiveAlgorithm(Algorithm):
 
             closest_idx = np.argmin(dist)
             chosen_fire_yx = fire_yx[closest_idx]
-            chosen_fire_idx = self.flatten_yx_to_idx[chosen_fire_yx]
+            chosen_fire_idx = self.env.yx_to_flatten_idx[chosen_fire_yx]
             del fire_yx[closest_idx]
             del dist[closest_idx]
 

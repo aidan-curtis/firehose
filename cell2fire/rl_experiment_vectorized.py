@@ -7,8 +7,8 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-from evaluate_model import MAP_TO_IGNITION_POINTS, MAP_TO_EXTRA_KWARGS
-from firehose.config import set_training_enabled
+from evaluate_model import MAP_TO_IGNITION_POINTS, MAP_TO_EXTRA_KWARGS, SUPPORTED_ALGOS
+from firehose.config import set_training_enabled, set_debug_mode
 from cell2fire.gym_env import FireEnv
 import os
 from stable_baselines3.common.monitor import Monitor
@@ -26,7 +26,12 @@ from stable_baselines3.common.torch_layers import (
     NatureCNN,
     create_mlp,
 )
-from stable_baselines3.common.preprocessing import get_action_dim, is_image_space, maybe_transpose, preprocess_obs
+from stable_baselines3.common.preprocessing import (
+    get_action_dim,
+    is_image_space,
+    maybe_transpose,
+    preprocess_obs,
+)
 from torch import nn
 from typing import Callable
 
@@ -71,12 +76,15 @@ class PaddedNatureCNN(BaseFeaturesExtractor):
 
         # Compute shape by doing one forward pass
         with th.no_grad():
-            n_flatten = self.cnn(th.as_tensor(observation_space.sample()[None]).float()).shape[1]
+            n_flatten = self.cnn(
+                th.as_tensor(observation_space.sample()[None]).float()
+            ).shape[1]
 
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         return self.linear(self.cnn(observations))
+
 
 def main(
     args,
@@ -125,17 +133,36 @@ def main(
     tf_logdir = f'{tf_logdir}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
 
     print(args.architecture)
-    if(args.architecture == "CnnPolicy"):
+    if args.architecture == "CnnPolicy":
         model_kwargs = {"features_extractor_class": PaddedNatureCNN}
     else:
         model_kwargs = {}
 
     if args.algo == "ppo":
-        model = PPO(args.architecture, env, features_extractor_class = PaddedNatureCNN, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
+        # model = PPO(args.architecture, env, features_extractor_class = PaddedNatureCNN, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
+        model = PPO(
+            args.architecture,
+            env,
+            verbose=1,
+            tensorboard_log=tf_logdir,
+            policy_kwargs=model_kwargs,
+        )
     elif args.algo == "a2c":
-        model = A2C(args.architecture, env, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
+        model = A2C(
+            args.architecture,
+            env,
+            verbose=1,
+            tensorboard_log=tf_logdir,
+            policy_kwargs=model_kwargs,
+        )
     elif args.algo == "trpo":
-        model = TRPO(args.architecture, env, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
+        model = TRPO(
+            args.architecture,
+            env,
+            verbose=1,
+            tensorboard_log=tf_logdir,
+            policy_kwargs=model_kwargs,
+        )
     elif args.algo == "random":
         model = RandomAlgorithm(
             args.architecture, env, verbose=1, tensorboard_log=tf_logdir
@@ -149,6 +176,8 @@ def main(
     else:
         raise NotImplementedError
 
+    # Example of how to load pre-trained model
+    # model = A2C.load("vectorize_model_2022-04-20_13-30-27/a2c_final.zip", env, verbose=1, tensorboard_log=tf_logdir)
     print("Tensorboard logdir:", tf_logdir)
 
     checkpoint_callback = CheckpointCallback(
@@ -195,12 +224,16 @@ def main(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-al", "--algo", default="a2c", help="Specifies the RL algorithm to use"
+        "-al",
+        "--algo",
+        default="a2c",
+        help="Specifies the RL algorithm to use",
+        choices=SUPPORTED_ALGOS,
     )
     parser.add_argument(
         "-m",
         "--map",
-        default="Sub20x20",
+        default="Sub40x40",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
@@ -218,11 +251,16 @@ if __name__ == "__main__":
     )
     # parser.add_argument("-p", "--preharvest", default="fixed", help="Specifies whether or not to harvest before fire ignition")
     parser.add_argument(
-        "-as", "--action_space", default="flat", help="Action space type"
+        "-as",
+        "--action_space",
+        default="flat",
+        help="Action space type",
+        choices=FireEnv.ACTION_TYPES,
     )
     parser.add_argument("-s", "--seed", default="0", help="RL seed")
     parser.add_argument(
-        "-l", "--logdir", default="/home/gridsan/acurtis/firehosetmp", help="RL seed"
+        "-l", "--logdir", default="/home/gridsan/acurtis/firehosetmp", help="Logdir"
     )
+    # parser.add_argument("-l", "--logdir", default="/tmp/firehose", help="RL seed")
     args = parser.parse_args()
     main(args)
