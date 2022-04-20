@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Any, Set, Tuple
 
 import numpy as np
-from gym.spaces import Discrete
 from gym_env import FireEnv
 
 
@@ -26,14 +25,30 @@ class Algorithm(ABC):
         pass
 
 
-class NoAlgorithm(Algorithm):
+class RandomAlgorithm(Algorithm):
+    """Randomly select actions with duplicates"""
+
+    def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
+        return self.env.action_space.sample(), None
+
+
+class FlatActionSpaceAlgorithm(Algorithm, ABC):
+    def __init__(self, env: FireEnv):
+        if env.action_type != "flat":
+            raise ValueError(
+                f"{self.__class__.__name__} only supports flat action space"
+            )
+        super().__init__(env)
+
+
+class NoAlgorithm(FlatActionSpaceAlgorithm):
     """Algorithm that is basically no-op"""
 
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
         return -1, None
 
 
-class HumanInputAlgorithm(Algorithm):
+class HumanInputAlgorithm(FlatActionSpaceAlgorithm):
     """Read in human input from stdin"""
 
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
@@ -43,14 +58,7 @@ class HumanInputAlgorithm(Algorithm):
         return human_actions[0], None
 
 
-class RandomAlgorithm(Algorithm):
-    """Randomly select actions with duplicates"""
-
-    def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
-        return self.env.action_space.sample(), None
-
-
-class NaiveAlgorithm(Algorithm):
+class NaiveAlgorithm(FlatActionSpaceAlgorithm):
     """
     The Naive algorithm selects the cell that is on fire that is closest to the
     ignition point in terms of Euclidean distance.
@@ -60,10 +68,7 @@ class NaiveAlgorithm(Algorithm):
     """
 
     def __init__(self, env: FireEnv):
-        if not isinstance(env.action_space, Discrete):
-            raise ValueError("Naive algorithm only supports discrete action spaces")
         super().__init__(env)
-
         self.prev_actions: Set[int] = {-1}
 
         assert (
@@ -93,7 +98,7 @@ class NaiveAlgorithm(Algorithm):
 
             closest_idx = np.argmin(dist)
             chosen_fire_yx = fire_yx[closest_idx]
-            chosen_fire_idx = self.env.flatten_yx_to_idx[chosen_fire_yx]
+            chosen_fire_idx = self.env.yx_to_flatten_idx[chosen_fire_yx]
             del fire_yx[closest_idx]
             del dist[closest_idx]
 

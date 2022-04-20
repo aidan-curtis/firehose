@@ -57,8 +57,6 @@ def main(args):
     # TODO: support these other args
     if args.ignition_type != "fixed":
         raise NotImplementedError("Only fixed ignition points supported")
-    if args.action_space != "flat":
-        raise NotImplementedError("Only flat action space supported")
 
     # Supercloud has TMPDIR so use that if it exists
     outdir = os.environ["TMPDIR"] if "TMPDIR" in os.environ.keys() else args.output_dir
@@ -121,7 +119,11 @@ if __name__ == "__main__":
         help="Specifies the path to the model to evaluate",
     )
     parser.add_argument(
-        "-as", "--action_space", default="flat", help="Action space type"
+        "-as",
+        "--action_space",
+        default="flat",
+        help="Action space type",
+        choices=FireEnv.ACTION_TYPES,
     )
     parser.add_argument(
         "-d", "--disable-video", action="store_true", help="Disable video recording"
