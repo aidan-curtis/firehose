@@ -10,7 +10,7 @@ import pandas as pd
 from gym import Env, spaces
 from gym.spaces import Box, Discrete
 
-from cell2fire.firehose.config import training_enabled
+from firehose.config import training_enabled
 from firehose.models import ExperimentHelper, IgnitionPoint, IgnitionPoints
 from firehose.process import Cell2FireProcess
 from firehose.utils import wait_until_file_populated
@@ -47,11 +47,12 @@ class FireEnv(Env):
         ignition_points: Optional[IgnitionPoints] = None,
         reward_func=fire_size_reward,
         num_ignition_points: int = 1,  # if ignition_points is specified this is ignored
-        pre_run_steps: int = 0,
-        num_steps_between_actions: int = 0,
+        steps_before_sim: int = 0,
+        steps_per_action: int = 1,
+        verbose: bool = False,
     ):
         """
-        
+
         :param fire_map: name of Fire map to use, should be in the data/ folder
         :param action_type: flat or xy
         :param observation_type: time or forest
@@ -60,9 +61,10 @@ class FireEnv(Env):
         :param ignition_points: ignition points to use. If None, will generate random ones
         :param reward_func: reward function
         :param num_ignition_points: #ignition points to generate if not specified
-        :param pre_run_steps: number of steps to run before allowing any actions
-        :param num_steps_between_actions: number of steps to run after each action
+        :param steps_before_sim: number of steps to run before allowing any actions
+        :param steps_per_action: number of steps to run after each action
             (is not run after pre-run steps)
+        :param verbose: verbose logging
         """
         self.iter = 0
         self.max_steps = max_steps
@@ -103,15 +105,17 @@ class FireEnv(Env):
         self.reward_func = reward_func
 
         # Number of steps to progress simulation before applying any actions
-        assert pre_run_steps >= 0
-        self.pre_run_steps = pre_run_steps
+        assert steps_before_sim >= 0
+        self.steps_before_sim = steps_before_sim
 
         # Number of steps after each action to wait before taking another action
-        assert num_steps_between_actions >= 0
-        self.num_steps_after_action = num_steps_between_actions
+        assert steps_per_action >= 1, "Must have at least 1 step per action"
+        self.steps_per_action = steps_per_action
+
+        self.verbose = verbose
 
         # Note: Cell2Fire Process. Call this at the end of __init__!
-        self.fire_process = Cell2FireProcess(self)
+        self.fire_process = Cell2FireProcess(self, verbose)
 
     def _set_action_space(self):
         if self.action_type == "flat":
@@ -136,7 +140,10 @@ class FireEnv(Env):
         elif self.observation_space == "time":
             # Blind model
             self.observation_space = spaces.Box(
-                low=0, high=self.max_steps + 1, shape=(1,), dtype=np.uint8,
+                low=0,
+                high=self.max_steps + 1,
+                shape=(1,),
+                dtype=np.uint8,
             )
 
     def get_observation(self):
@@ -159,45 +166,49 @@ class FireEnv(Env):
         else:
             raise NotImplementedError(f"Unsupported action type {self.action_type}")
 
-    def step(
-        self,
-        action,
-        debug: bool = False,
-        steps_after_action: bool = False,
-        dont_print: bool = False,
-    ):
+    def step(self, action):
         """
         Step in the environment
 
         :param action: index of cell to harvest, using 0 indexing
-        :param debug:
         """
         # Get action for action_type
         raw_action = action
         action = self.get_action(raw_action=raw_action)
 
-        if debug:
+        if self.verbose:
             print(f"=== Step {self.iter} ===")
             print(f"Action: {raw_action}")
             if action != raw_action:
                 print(f"Converted action: {action}")
 
         # Code crashes for some reason when action == ignition point
-        for ignition_point in self.ignition_points.points:
-            if ignition_point.idx == action + 1:
-                action = random.choice([action + 1, action - 1])
+        # for ignition_point in self.ignition_points.points:
+        #     if ignition_point.idx == action + 1:
+        #         print("action selected is ignition point hmm")
+        #         # action = random.choice([action + 1, action - 1])
 
         # IMPORTANT! Actions must be indexed from 0. The Cell2FireProcess class will
         # handle the indexing when calling Cell2Fire
-        self.fire_process.apply_actions(action, debug)
+        self.fire_process.apply_actions(action)
 
-        state_file = self.fire_process.read_line()
-
-        if not state_file.endswith(".csv"):
+        # Progress fire process to next state
+        csv_files = self.fire_process.progress_to_next_state()
+        if not csv_files:
+            assert (
+                not self.fire_process.finished
+            ), "Fire process finished but no csv files"
+            # No state and Cell2Fire didn't finish, so something went wrong
             print(action)
-            print("State file:", state_file)
+            print("CSV files are empty")
+            # print("State file:", state_file)
             print("Proc Error. Resetting state")
-            return self.state, self.reward_func(self.state, self.forest_image), True, {}
+            raise NotImplementedError
+            return_state = self.get_observation()
+            return return_state, self.reward_func(self.state, self.forest_image), True, {}
+        else:
+            # Use last CSV as that is most recent forest
+            state_file = csv_files[-1]
 
         # Bad Hack
         # FIXME: if multiple CSVs are returned for each step, then we only take the
@@ -206,12 +217,9 @@ class FireEnv(Env):
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
 
-        # Progress fire process to next state
-        self.fire_process.progress_to_next_state(debug)
-
         # Check if we've exceeded max steps or Cell2Fire finished simulating
         done = self.iter >= self.max_steps or self.fire_process.finished
-        if not dont_print and not debug and not training_enabled():
+        if not self.verbose and not training_enabled():
             print(
                 f"\rStep {self.iter + 1}/{self.max_steps}. "
                 f"Num cells on fire {num_cells_on_fire(self.state)}",
@@ -220,15 +228,7 @@ class FireEnv(Env):
             if done:
                 print()
 
-        # Handle case where we step simulation after applying each action
-        if not steps_after_action:
-            # Subtract 1 as we already stepped for current action
-            for _ in range(self.num_steps_after_action - 1):
-                # Apply -1 action which is no-op
-                self.step(-1, steps_after_action=True, dont_print=True)
-
         self.iter += 1
-
         return_state = self.get_observation()
         return return_state, self.reward_func(return_state, self.forest_image), done, {}
 
@@ -281,35 +281,23 @@ class FireEnv(Env):
             (self.forest_image.shape[0], self.forest_image.shape[1]), dtype=np.uint8
         )
         # Kill and respawn Cell2Fire process
-        self.fire_process.reset(kwargs.get("debug", False))
-
-        # Step minimum number of steps before applying actions
-        if self.pre_run_steps > 0:
-            # Override num steps after action so we don't step unnecessarily
-            tmp_num = self.num_steps_after_action
-            self.num_steps_after_action = 0
-
-            for _ in range(self.pre_run_steps):
-                # Apply no-op action
-                self.step(-1)
-
-            self.num_steps_after_action = tmp_num
+        self.fire_process.reset()
 
         return self.get_observation()
 
 
 def main(debug: bool, delay_time: float = 0.0, **env_kwargs):
-    env = FireEnv(**env_kwargs)
+    env = FireEnv(**env_kwargs, verbose=debug)
     env.render()
 
-    _ = env.reset(debug=debug)
+    _ = env.reset()
 
     done = False
     num_steps = 0
     while not done:
         action = env.action_space.sample()
         try:
-            state, reward, done, info = env.step(action, debug=debug)
+            state, reward, done, info = env.step(action)
             num_steps += 1
         except Exception as e:
             env.fire_process.kill()
@@ -328,6 +316,6 @@ def main(debug: bool, delay_time: float = 0.0, **env_kwargs):
 if __name__ == "__main__":
     # main(debug=True, max_steps=1000)
     # main(debug=True, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))
-    for run_idx in range(100):
+    for run_idx in range(1):
         print(f"=== Run {run_idx} ===")
-        main(debug=False, delay_time=0.00)
+        main(debug=True, delay_time=0.00, steps_before_sim=50, steps_per_action=5)

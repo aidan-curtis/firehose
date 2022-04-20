@@ -7,11 +7,20 @@ from gym.wrappers.monitoring.video_recorder import VideoRecorder
 from sb3_contrib import TRPO
 from stable_baselines3 import A2C, PPO
 
-from cell2fire.gym_env import FireEnv, num_cells_on_fire
-from firehose.baselines import HumanInputAlgorithm, NaiveAlgorithm, RandomAlgorithm
-from firehose.models import IgnitionPoint, IgnitionPoints
+from cell2fire.gym_env import FireEnv
+from firehose.baselines import HumanInputAlgorithm, NaiveAlgorithm, RandomAlgorithm, NoAlgorithm
+from firehose.config import set_debug_mode
+from firehose.models import IgnitionPoints, IgnitionPoint
 
-_NO_MODEL_ALGOS = {"random", "naive", "human"}
+_NO_MODEL_ALGOS = {"random", "naive", "human", "none"}
+
+
+MAP_TO_IGNITION_POINTS = {
+    "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])
+}
+MAP_TO_EXTRA_KWARGS = {
+    "Sub40x40": {"steps_before_sim": 30, "steps_per_action": 3}
+}
 
 
 def main(args):
@@ -26,9 +35,9 @@ def main(args):
         fire_map=args.map,
         output_dir=outdir,
         max_steps=500,
-        # ignition_points=IgnitionPoints([IgnitionPoint(370, 1)]),
-        pre_run_steps=50,
-        num_steps_between_actions=10,
+        ignition_points=MAP_TO_IGNITION_POINTS.get(args.map, None),
+        verbose=True,
+        **MAP_TO_EXTRA_KWARGS.get(args.map, {"steps_before_sim": 50, "steps_per_action": 10}),
     )
 
     if args.algo not in _NO_MODEL_ALGOS:
@@ -46,12 +55,18 @@ def main(args):
         model = NaiveAlgorithm(env)
     elif args.algo == "human":
         model = HumanInputAlgorithm(env)
+    elif args.algo == "none":
+        model = NoAlgorithm(env)
     else:
         raise NotImplementedError
 
     date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    if not os.path.exists("videos"):
+        os.mkdir("videos")
+
+    video_fname = f"videos/{date_str}-{args.algo}.mp4"
     if not args.disable_video:
-        video_recorder = VideoRecorder(env, f"{args.algo}-{date_str}.mp4", enabled=True)
+        video_recorder = VideoRecorder(env, video_fname, enabled=True)
 
     obs = env.reset()
     env.render()
@@ -64,12 +79,11 @@ def main(args):
         if not args.disable_video:
             video_recorder.capture_frame()
 
-        if done:
-            obs = env.reset()
     env.close()
 
     if not args.disable_video:
         video_recorder.close()
+        os.remove(video_recorder.metadata_path)
     print("Done!")
 
 
@@ -80,16 +94,18 @@ if __name__ == "__main__":
         "--algo",
         default="naive",
         help="Specifies the RL algorithm to use",
-        choices={"human", "random", "naive", "ppo", "a2c", "trpo"},
+        choices={"human", "random", "naive", "none", "ppo", "a2c", "trpo"},
     )
     parser.add_argument(
         "-m",
         "--map",
-        default="Sub20x20",
+        default="Sub40x40",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
-        "-p", "--model_path", help="Specifies the path to the model to evaluate",
+        "-p",
+        "--model_path",
+        help="Specifies the path to the model to evaluate",
     )
     parser.add_argument(
         "-as", "--action_space", default="flat", help="Action space type"
@@ -105,4 +121,6 @@ if __name__ == "__main__":
         choices={"fixed", "random"},
     )
     print("Args:", json.dumps(vars(parser.parse_args()), indent=2))
+    # set_debug_mode(True)
+
     main(args=parser.parse_args())

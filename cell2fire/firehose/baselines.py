@@ -26,6 +26,11 @@ class Algorithm(ABC):
         pass
 
 
+class NoAlgorithm(Algorithm):
+    def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
+        return -1, None
+
+
 class HumanInputAlgorithm(Algorithm):
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
         human_actions_str = input("Input actions:")
@@ -73,13 +78,9 @@ class NaiveAlgorithm(Algorithm):
         ]
 
         chosen_fire_idx = -1
-        while (
-            # Don't allow selection of ignition point itself
-            chosen_fire_idx == -1
-            or chosen_fire_idx == self.ignition_point.idx - 1
-        ):
+        while chosen_fire_idx == -1:
+            # Exhausted all other choices so do a no-op
             if not dist:
-                # no-op
                 return -1, None
 
             closest_idx = np.argmin(dist)

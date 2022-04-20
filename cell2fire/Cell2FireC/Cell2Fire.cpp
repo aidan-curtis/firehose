@@ -1473,6 +1473,13 @@ int main(int argc, char * argv[]){
 			tstep = 0;
 			stop = 0;
 
+			// Initial steps before any actions can be applied
+			for (int step=0; step < args.StepsBeforeSim; step++){
+			    // std::cout << "Step before Action: " << step << std::endl;
+                Forest.Step(generator, rnumber, rnumber2, rnumber3);
+                tstep = tstep + 1;
+			}
+
 			// While instead of for to have explicit breaking condition
 			while (tstep <= Forest.args.MaxFirePeriods * Forest.args.TotalYears - 1 && stop == 0){
 				// printf("\n ---- tstep %d \n", tstep);
@@ -1529,17 +1536,28 @@ int main(int argc, char * argv[]){
                     }
                 }
 
-                // TODO: willshen@ check these harvestCells are being used to step.
-                Forest.Step(generator, rnumber, rnumber2, rnumber3);
-				// printf("\nDone: %d", Forest.done);
+                // Advance simulation by required steps
+                for (int step_idx = 0; step_idx < args.StepsPerAction; step_idx++) {
+                    // TODO: willshen@ check these harvestCells are being used to step.
+                    Forest.Step(generator, rnumber, rnumber2, rnumber3);
+                    // printf("\nDone: %d", Forest.done);
 
-                // TODO: willshen@ check weather is not run out or loop around it
-				if (Forest.done){
-					//DEBUGprintf("\n Done = True!, break \n");
-					stop = 1;
-				}
+                    tstep = tstep + 1;
 
-				tstep = tstep + 1;
+                    // TODO: willshen@ check weather is not run out or loop around it
+                    if (Forest.done) {
+                        //DEBUGprintf("\n Done = True!, break \n");
+                        stop = 1;
+                        break;
+                    }
+
+                    // Max number of steps exceeded
+                    if (tstep > Forest.args.MaxFirePeriods * Forest.args.TotalYears) {
+                        stop = 1;
+                        break;
+                    }
+                }
+
 			}
 			// Enforces to satisfy the total number of simulations (if no ignition, find another cell until we obtain the TotalSim asked)
 			//if (Forest.sim > args.TotalSims){
