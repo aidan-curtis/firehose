@@ -28,7 +28,9 @@ This writes a video to a `videos/` folder that will be created
 ```
 python cell2fire/evaluate_model.py --algo naive
 ```
-## Train a PPO agent
+
+## Train RL agents parallelized
 ```
-python cell2fire/rl_experiment.py
+python cell2fire/rl_experiment_vectorized.py
 ```
+

@@ -30,6 +30,9 @@ class IgnitionPoints:
     RADIUS: ClassVar[int] = 0
     CSV_NAME: ClassVar[str] = "Ignitions.csv"
 
+    def __len__(self):
+        return len(self.points)
+
     @property
     def year(self) -> int:
         year = [p.year for p in self.points]
