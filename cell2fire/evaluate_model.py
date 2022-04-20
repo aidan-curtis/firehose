@@ -54,6 +54,9 @@ def _get_model(algo: str, model_path: Optional[str], env: FireEnv):
 
 
 def main(args):
+    if args.ignition_type != "fixed":
+        raise NotImplementedError("Only fixed ignition points supported")
+
     # Supercloud has TMPDIR so use that if it exists
     outdir = os.environ["TMPDIR"] if "TMPDIR" in os.environ.keys() else args.output_dir
 
