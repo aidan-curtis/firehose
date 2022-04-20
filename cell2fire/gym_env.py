@@ -317,4 +317,4 @@ if __name__ == "__main__":
     # main(debug=True, ignition_points=IgnitionPoints([IgnitionPoint(1459, 1)]))
     for run_idx in range(1):
         print(f"=== Run {run_idx} ===")
-        main(debug=True, delay_time=0.00)
+        main(debug=True, delay_time=0.00, steps_before_sim=50, steps_per_action=5)

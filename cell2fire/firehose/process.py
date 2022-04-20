@@ -108,7 +108,7 @@ class Cell2FireProcess:
         # Input is a single line with indices of cells to harvest separated by spaces
         value = " ".join(cell2fire_actions) + "\n"
         if self.verbose:
-            print(value, end="")
+            print("Actions (1 indexed):", value, end="")
 
         value = bytes(value, "UTF-8")
         self.write_actions(value)
