@@ -1,8 +1,6 @@
-import copy
 import os
-import random
 import time
-from typing import Optional
+from typing import Dict, List, Optional, Set, Tuple
 
 import cv2
 import numpy as np
@@ -11,11 +9,10 @@ from gym import Env, spaces
 from gym.spaces import Box, Discrete
 
 from firehose.config import training_enabled
-from firehose.models import ExperimentHelper, IgnitionPoint, IgnitionPoints
+from firehose.models import ExperimentHelper, IgnitionPoints
 from firehose.process import Cell2FireProcess
 from firehose.utils import wait_until_file_populated
 
-ENVS = []
 _MODULE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -30,13 +27,18 @@ def num_cells_on_fire(state):
 
 
 def fire_size_reward(state, forest, scale=10):
+    """-(num cells on fire) / (total num cells in forest) * scale"""
+    # State is expected to be -1 (harvest), 0 (no fire), 1 (fire)
     assert state.shape == forest.shape[:2]
-    idxs = np.where(state > 0)
-    return -len(idxs[0]) / (forest.shape[0] * forest.shape[1]) * scale
+    fire_idxs = np.where(state > 0)
+    return -len(fire_idxs[0]) / (forest.shape[0] * forest.shape[1]) * scale
 
 
 class FireEnv(Env):
     metadata = {"render.modes": ["human", "rgb_array"]}
+
+    ACTION_TYPES: Set[str] = {"flat", "xy"}
+    OBSERVATION_TYPES: Set[str] = {"forest_rgb", "forest", "time"}
 
     def __init__(
         self,
@@ -50,6 +52,7 @@ class FireEnv(Env):
         num_ignition_points: int = 1,  # if ignition_points is specified this is ignored
         steps_before_sim: int = 0,
         steps_per_action: int = 1,
+        action_radius: int = 1,
         verbose: bool = False,
     ):
         """
@@ -65,19 +68,24 @@ class FireEnv(Env):
         :param steps_before_sim: number of steps to run before allowing any actions
         :param steps_per_action: number of steps to run after each action
             (is not run after pre-run steps)
+        :param action_radius: radius of action around its cell. Only 1,2 supported right now.
         :param verbose: verbose logging
         """
+        # Current step idx
         self.iter = 0
+        # Maximum number of steps, note simulation could end before this is reached
         self.max_steps = max_steps
 
-        # Helper code
+        # Helper object
         self.helper = ExperimentHelper(
             base_dir=_MODULE_DIR, map=fire_map, output_dir=output_dir
         )
+
+        # Image of forest which we overlay
         self.forest_image = self.helper.forest_image
         self.uforest_image = (self.forest_image * 255).astype("uint8")
+        self.height, self.width = self.forest_image.shape[:2]
 
-        # TODO: fix this
         # Randomly generate ignition points if required
         if not ignition_points:
             # We can only have 1 ignition in a given year in Cell2Fire (supposedly)
@@ -88,19 +96,21 @@ class FireEnv(Env):
                 num_points=num_ignition_points,
             )
         else:
+            assert (
+                len(ignition_points) == 1
+            ), "We don't know what happens with multiple ignition points"
             self.ignition_points = ignition_points
 
-        # Set action and observation spaces
+        # Set action and observation spaces.
         self.action_type = action_type
         self._set_action_space()
 
+        # Note that the observation space != underlying state which is used for rewards
         self.observation_type = observation_type
         self._set_observation_space()
 
         # Set initial state to be empty
-        self.state = np.zeros(
-            (self.forest_image.shape[0], self.forest_image.shape[1]), dtype=np.uint8
-        )
+        self.state = np.zeros((self.height, self.width), dtype=np.uint8)
 
         # Reward function
         self.reward_func = reward_func
@@ -113,83 +123,122 @@ class FireEnv(Env):
         assert steps_per_action >= 1, "Must have at least 1 step per action"
         self.steps_per_action = steps_per_action
 
+        # Radius of action around cell. If 1 then just affects cell itself,
+        # if 2, then it affects 3x3 area around cell, etc.
+        assert action_radius in {1, 2}, "Only 1 and 2 action radius supported"
+        self.action_radius = action_radius
+
+        # Verbose logging in gym env and subprocess
         self.verbose = verbose
 
-        height, width = self.forest_image.shape[:2]
-        self.flatten_idx_to_yx = {
-            x + y * width: (y, x) for x in range(width) for y in range(height)
+        # Mapping of flattened index (0-indexed) to y,x coordinates (i.e. row and column)
+        self.flatten_idx_to_yx: Dict[int, Tuple[int, int]] = {
+            x + y * self.width: (y, x)
+            for x in range(self.width)
+            for y in range(self.height)
         }
-        self.flatten_yx_to_idx = {b: a for a, b, in self.flatten_idx_to_yx.items()}
+        self.yx_to_flatten_idx: Dict[Tuple[int, int], int] = {
+            yx: idx for idx, yx, in self.flatten_idx_to_yx.items()
+        }
 
-        # Note: Cell2Fire Process. Call this at the end of __init__!
-        self.fire_process = Cell2FireProcess(self, verbose)
+        # Note: Cell2Fire Process. Call this at the end of __init__ once everything in
+        #  env itself is setup!
+        self.fire_process = Cell2FireProcess(env=self, verbose=verbose)
 
     def _set_action_space(self):
         if self.action_type == "flat":
-            # Flat discrete action space
-            self.action_space = Discrete(
-                (self.forest_image.shape[0] * self.forest_image.shape[1]) - 1
-            )
+            # Flat discrete action space from (0 to number of pixels - 1)
+            # We use 0-indexing here. This can be very high dimensional for large maps
+            self.action_space = Discrete((self.height * self.width) - 1)
         elif self.action_type == "xy":
             # Continuous action space for x and y. We round at evaluation time
+            # Note: underlying it is y,x so it fits better with np array
             self.action_space = Box(low=0, high=1, shape=(2,))
         else:
             raise NotImplementedError(f"Unsupported action type {self.action_type}")
 
     def _set_observation_space(self):
-        if self.observation_type == "forest":
+        # Note: observation space is what is returned to the agent. We use the state to
+        #  calculate rewards.
+        if self.observation_type == "forest_rgb":
+            # Forest as a RGB image
+            # TODO: should we normalize the RGB image? At least divide by 255 so its [0, 1]
             self.observation_space = spaces.Box(
-                low=-1,
-                high=1,
-                shape=(self.forest_image.shape[0], self.forest_image.shape[1]),
+                low=0,
+                high=255,
+                shape=(self.height, self.width, 3),
                 dtype=np.uint8,
+            )
+        elif self.observation_type == "forest":
+            # Forest as -1 (harvested), 0 (nothing), 1 (on fire)
+            self.observation_space = spaces.Box(
+                low=-1, high=1, shape=(self.height, self.width), dtype=np.uint8
             )
         elif self.observation_space == "time":
             # Blind model
             self.observation_space = spaces.Box(
-                low=0, high=self.max_steps + 1, shape=(1,), dtype=np.uint8,
+                low=0,
+                high=self.max_steps + 1,
+                shape=(1,),
+                dtype=np.uint8,
             )
+        else:
+            raise ValueError(f"Unsupported observation type {self.observation_type}")
 
     def get_observation(self):
-        return (
-            self.iter if self.observation_type == "time" else self.state # self.get_painted_image()
-        )
+        if self.observation_type == "forest_rgb":
+            return self.get_painted_image()
+        elif self.observation_type == "forest":
+            return self.state
+        elif self.observation_type == "time":
+            return self.iter
+        else:
+            raise ValueError(f"Unsupported observation type {self.observation_type}")
+
+    def _get_actions_in_radius(self, cell_idx: int) -> List[int]:
+        """Collect the cells within the radius of the given cell."""
+        assert self.action_radius == 2, "Expected radius of 2"
+        y, x = self.flatten_idx_to_yx[cell_idx]
+        yxs = [
+            (y + 1, x + 1),
+            (y + 1, x),
+            (y + 1, x - 1),
+            (y, x + 1),
+            (y, x),
+            (y, x - 1),
+            (y - 1, x + 1),
+            (y - 1, x),
+            (y - 1, x - 1),
+        ]
+        actions = [
+            self.yx_to_flatten_idx[yx] for yx in yxs if yx in self.yx_to_flatten_idx
+        ]
+        assert len(actions) >= 1
+        return actions
 
     def get_action(self, raw_action):
         if self.action_type == "xy":
-            # Action is an x/y vector, so convert to integer
-            # TODO: Check if this is the correct x/y order to flatten
-            x = int(raw_action[0] * self.forest_image.shape[0])
-            y = int(raw_action[1] * self.forest_image.shape[1])
-            min_action = self.forest_image.shape[0] * self.forest_image.shape[1] - 1
+            # Note: we call action type xy, but it is actually represented as a yx
+            y, x = raw_action
 
-            action = min(x * self.forest_image.shape[1] + y, min_action)
-            return action
+            # Round continuous values to their closest integer
+            # Subtract 1 as we use 0-indexing for actions in the gym env
+            y = round(y * (self.height - 1))
+            x = round(x * (self.width - 1))
+            if (y, x) not in self.yx_to_flatten_idx:
+                raise ValueError(
+                    f"Invalid action {raw_action}. Not within bounds of forest image"
+                )
+            return self.yx_to_flatten_idx[(y, x)]
         elif self.action_type == "flat":
-            if raw_action == -1:
-                # handle no-op separately
+            # No-op doesn't have a radius
+            if raw_action == -1 or self.action_radius == 1:
                 return raw_action
-
-            y, x = self.flatten_idx_to_yx[raw_action]
-            yxs = [
-                # (y + 1, x + 1),
-                # (y + 1, x),
-                # (y + 1, x - 1),
-                # (y, x + 1),
-                (y, x),
-                # (y, x - 1),
-                # (y - 1, x + 1),
-                # (y - 1, x),
-                # (y - 1, x - 1),
-            ]
-            actions = []
-            for yx in yxs:
-                if yx in self.flatten_yx_to_idx:
-                    actions.append(self.flatten_yx_to_idx[yx])
-            assert len(actions) >= 1
-            return actions
+            else:
+                # Need to consider cells in radius
+                return self._get_actions_in_radius(raw_action)
         else:
-            raise NotImplementedError(f"Unsupported action type {self.action_type}")
+            raise ValueError(f"Unsupported action type {self.action_type}")
 
     def step(self, action):
         """
@@ -207,19 +256,15 @@ class FireEnv(Env):
             # if action != raw_action:
             print(f"Converted action: {action}")
 
-        # Code crashes for some reason when action == ignition point
-        # for ignition_point in self.ignition_points.points:
-        #     if ignition_point.idx == action + 1:
-        #         print("action selected is ignition point hmm")
-        #         # action = random.choice([action + 1, action - 1])
-
         # IMPORTANT! Actions must be indexed from 0. The Cell2FireProcess class will
         # handle the indexing when calling Cell2Fire
         self.fire_process.apply_actions(action)
 
         # Progress fire process to next state
         csv_files = self.fire_process.progress_to_next_state()
+
         if not csv_files:
+            # Haven't encountered this state yet so lmk if you do
             assert (
                 not self.fire_process.finished
             ), "Fire process finished but no csv files"
@@ -229,13 +274,9 @@ class FireEnv(Env):
             # print("State file:", state_file)
             print("Proc Error. Resetting state")
             raise NotImplementedError
-            return_state = self.get_observation()
-            return (
-                return_state,
-                self.reward_func(self.state, self.forest_image),
-                True,
-                {},
-            )
+            obs = self.get_observation()
+            reward = self.reward_func(self.state, self.forest_image)
+            return obs, reward, True, {}
         else:
             # Use last CSV as that is most recent forest
             state_file = csv_files[-1]
@@ -247,6 +288,7 @@ class FireEnv(Env):
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
 
+        # Note: call reward_func with self.state not return state!!!
         reward = self.reward_func(self.state, self.forest_image)
 
         # Check if we've exceeded max steps or Cell2Fire finished simulating
@@ -262,12 +304,12 @@ class FireEnv(Env):
                 print()
 
         self.iter += 1
-        return_state = self.get_observation()
-        # Note: call reward_func with state not return state!!!
-        return return_state, reward, done, {}
+        obs = self.get_observation()
+        return obs, reward, done, {}
 
-    def get_painted_image(self):
-        im = copy.copy(self.uforest_image)
+    def get_painted_image(self) -> np.ndarray:
+        # Make copy of array as we modify it in-place
+        im = np.copy(self.uforest_image)
 
         # Set fire cells
         fire_idxs = np.where(self.state > 0)
@@ -293,7 +335,8 @@ class FireEnv(Env):
 
         im = self.get_painted_image()
 
-        # Scale to be larger
+        # Scale image to be larger for visualization purposes as it is tiny
+        # (e.g. 20x20, 40x40)
         im = cv2.resize(
             im,
             (im.shape[1] * scale_factor, im.shape[0] * scale_factor),
@@ -306,14 +349,13 @@ class FireEnv(Env):
             cv2.imshow("Fire", im)
             cv2.waitKey(20)
         else:
+            # This is for sb3 I think
             return im
 
     def reset(self, **kwargs):
         """Reset environment and restart process"""
         self.iter = 0
-        self.state = np.zeros(
-            (self.forest_image.shape[0], self.forest_image.shape[1]), dtype=np.uint8
-        )
+        self.state = np.zeros((self.height, self.width), dtype=np.uint8)
         # Kill and respawn Cell2Fire process
         self.fire_process.reset()
 
