@@ -247,12 +247,15 @@ class FireEnv(Env):
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
 
+        reward = self.reward_func(self.state, self.forest_image)
+
         # Check if we've exceeded max steps or Cell2Fire finished simulating
         done = self.iter >= self.max_steps or self.fire_process.finished
         if not self.verbose and not training_enabled():
             print(
                 f"\rStep {self.iter + 1}/{self.max_steps}. "
-                f"Num cells on fire {num_cells_on_fire(self.state)}",
+                f"#Fire {num_cells_on_fire(self.state)}, ",
+                f"Reward: {reward}",
                 end="",
             )
             if done:
@@ -261,7 +264,7 @@ class FireEnv(Env):
         self.iter += 1
         return_state = self.get_observation()
         # Note: call reward_func with state not return state!!!
-        return return_state, self.reward_func(self.state, self.forest_image), done, {}
+        return return_state, reward, done, {}
 
     def get_painted_image(self):
         im = copy.copy(self.uforest_image)

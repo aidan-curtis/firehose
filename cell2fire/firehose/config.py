@@ -1,3 +1,5 @@
+""" Shared configuration for firehose. """
+
 TRAINING_ENABLED: bool = False
 DEBUG_MODE: bool = False
 
