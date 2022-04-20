@@ -8,7 +8,7 @@ from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from evaluate_model import MAP_TO_IGNITION_POINTS, MAP_TO_EXTRA_KWARGS
-from firehose.config import set_training_enabled
+from firehose.config import set_training_enabled, set_debug_mode
 from cell2fire.gym_env import FireEnv
 import os
 from stable_baselines3.common.monitor import Monitor
@@ -80,7 +80,7 @@ class PaddedNatureCNN(BaseFeaturesExtractor):
 
 def main(
     args,
-    total_timesteps=3_000_000,
+    total_timesteps=2_500_000,
     checkpoint_save_freq=int(2_000_000 / 100),
     should_eval=False,
 ):
@@ -131,7 +131,8 @@ def main(
         model_kwargs = {}
 
     if args.algo == "ppo":
-        model = PPO(args.architecture, env, features_extractor_class = PaddedNatureCNN, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
+        # model = PPO(args.architecture, env, features_extractor_class = PaddedNatureCNN, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
+        model = PPO(args.architecture, env, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
     elif args.algo == "a2c":
         model = A2C(args.architecture, env, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
     elif args.algo == "trpo":
@@ -149,6 +150,7 @@ def main(
     else:
         raise NotImplementedError
 
+    # model = A2C.load("vectorize_model_2022-04-20_13-30-27/a2c_final.zip", env, verbose=1, tensorboard_log=tf_logdir)
     print("Tensorboard logdir:", tf_logdir)
 
     checkpoint_callback = CheckpointCallback(
@@ -200,7 +202,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m",
         "--map",
-        default="Sub20x20",
+        default="Sub40x40",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
@@ -222,7 +224,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-s", "--seed", default="0", help="RL seed")
     parser.add_argument(
-        "-l", "--logdir", default="/home/gridsan/acurtis/firehosetmp", help="RL seed"
+        "-l", "--logdir", default="/tmp/firehose", help="RL seed"
     )
     args = parser.parse_args()
     main(args)

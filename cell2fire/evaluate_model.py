@@ -75,6 +75,7 @@ def main(args):
     while not done:
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, done, info = env.step(action)
+        print("Reward:", reward)
         env.render()
         if not args.disable_video:
             video_recorder.capture_frame()
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-al",
         "--algo",
-        default="naive",
+        default="a2c",
         help="Specifies the RL algorithm to use",
         choices={"human", "random", "naive", "none", "ppo", "a2c", "trpo"},
     )
@@ -105,6 +106,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p",
         "--model_path",
+        default="vectorize_model_2022-04-20_15-53-19/a2c_final.zip",
         help="Specifies the path to the model to evaluate",
     )
     parser.add_argument(

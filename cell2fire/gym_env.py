@@ -139,23 +139,20 @@ class FireEnv(Env):
     def _set_observation_space(self):
         if self.observation_type == "forest":
             self.observation_space = spaces.Box(
-                low=0,
-                high=255,
-                shape=(self.forest_image.shape[0], self.forest_image.shape[1], 3),
+                low=-1,
+                high=1,
+                shape=(self.forest_image.shape[0], self.forest_image.shape[1]),
                 dtype=np.uint8,
             )
         elif self.observation_space == "time":
             # Blind model
             self.observation_space = spaces.Box(
-                low=0,
-                high=self.max_steps + 1,
-                shape=(1,),
-                dtype=np.uint8,
+                low=0, high=self.max_steps + 1, shape=(1,), dtype=np.uint8,
             )
 
     def get_observation(self):
         return (
-            self.iter if self.observation_type == "time" else self.get_painted_image()
+            self.iter if self.observation_type == "time" else self.state # self.get_painted_image()
         )
 
     def get_action(self, raw_action):
@@ -169,7 +166,28 @@ class FireEnv(Env):
             action = min(x * self.forest_image.shape[1] + y, min_action)
             return action
         elif self.action_type == "flat":
-            return raw_action
+            if raw_action == -1:
+                # handle no-op separately
+                return raw_action
+
+            y, x = self.flatten_idx_to_yx[raw_action]
+            yxs = [
+                # (y + 1, x + 1),
+                # (y + 1, x),
+                # (y + 1, x - 1),
+                # (y, x + 1),
+                (y, x),
+                # (y, x - 1),
+                # (y - 1, x + 1),
+                # (y - 1, x),
+                # (y - 1, x - 1),
+            ]
+            actions = []
+            for yx in yxs:
+                if yx in self.flatten_yx_to_idx:
+                    actions.append(self.flatten_yx_to_idx[yx])
+            assert len(actions) >= 1
+            return actions
         else:
             raise NotImplementedError(f"Unsupported action type {self.action_type}")
 
@@ -186,8 +204,8 @@ class FireEnv(Env):
         if self.verbose:
             print(f"=== Step {self.iter} ===")
             print(f"Action: {raw_action}")
-            if action != raw_action:
-                print(f"Converted action: {action}")
+            # if action != raw_action:
+            print(f"Converted action: {action}")
 
         # Code crashes for some reason when action == ignition point
         # for ignition_point in self.ignition_points.points:
@@ -212,7 +230,12 @@ class FireEnv(Env):
             print("Proc Error. Resetting state")
             raise NotImplementedError
             return_state = self.get_observation()
-            return return_state, self.reward_func(self.state, self.forest_image), True, {}
+            return (
+                return_state,
+                self.reward_func(self.state, self.forest_image),
+                True,
+                {},
+            )
         else:
             # Use last CSV as that is most recent forest
             state_file = csv_files[-1]
