@@ -115,13 +115,17 @@ def main(
         single_env = lambda: FireEnv(
             ignition_points=ig_points,
             action_type=args.action_space,
+            action_radius=args.action_radius,
             fire_map=args.map,
             output_dir=outdir,
             **MAP_TO_EXTRA_KWARGS[args.map],
         )
     elif args.ignition_type == "random":
         single_env = lambda: FireEnv(
-            action_type=args.action_space, fire_map=args.map, output_dir=outdir
+            action_type=args.action_space, 
+            action_radius=args.action_radius,
+            fire_map=args.map,
+            output_dir=outdir
         )
     else:
         raise NotImplementedError
@@ -145,6 +149,7 @@ def main(
             env,
             verbose=1,
             tensorboard_log=tf_logdir,
+            gamma=args.gamma,
             policy_kwargs=model_kwargs,
         )
     elif args.algo == "a2c":
@@ -153,6 +158,7 @@ def main(
             env,
             verbose=1,
             tensorboard_log=tf_logdir,
+            gamma=args.gamma,
             policy_kwargs=model_kwargs,
         )
     elif args.algo == "trpo":
@@ -161,6 +167,7 @@ def main(
             env,
             verbose=1,
             tensorboard_log=tf_logdir,
+            gamma=args.gamma,
             policy_kwargs=model_kwargs,
         )
     elif args.algo == "random":
@@ -249,13 +256,26 @@ if __name__ == "__main__":
         help="Specifies whether to use a random or fixed fire ignitinon point",
         choices={"fixed", "random"},
     )
-    # parser.add_argument("-p", "--preharvest", default="fixed", help="Specifies whether or not to harvest before fire ignition")
     parser.add_argument(
         "-as",
         "--action_space",
         default="flat",
         help="Action space type",
         choices=FireEnv.ACTION_TYPES,
+    )
+    parser.add_argument(
+        "-g",
+        "--gamma",
+        default=0.99,
+        type=float,
+        help="Agent gamma"
+    )
+    parser.add_argument(
+        "-ar",
+        "--action_radius",
+        default=1,
+        type=int,
+        help="Action radius"
     )
     parser.add_argument("-s", "--seed", default="0", help="RL seed")
     parser.add_argument(
