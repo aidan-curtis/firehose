@@ -152,6 +152,15 @@ class ExperimentHelper:
 
         print(f"Copied modified input data folder to {tmp_dir}")
 
+    def overwrite_ignition_points(self, ignition_points: IgnitionPoints):
+        """ Overwrite ignition points CSV file """
+        tmp_dir = self.tmp_input_folder
+        ignition_points_csv = os.path.join(tmp_dir, IgnitionPoints.CSV_NAME)
+        # Only remove ignitions if it already exists
+        if os.path.exists(ignition_points_csv):
+            os.remove(ignition_points_csv)
+        ignition_points.write_to_csv(ignition_points_csv)
+
     def generate_random_ignition_points(
         self, num_points: int = 1, year: int = 1, radius: int = IgnitionPoints.RADIUS
     ) -> IgnitionPoints:

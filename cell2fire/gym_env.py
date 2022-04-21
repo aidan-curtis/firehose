@@ -86,14 +86,15 @@ class FireEnv(Env):
             assert (
                 num_ignition_points == 1
             ), "Only 1 ignition point supported at the moment"
-            self.ignition_points = self.helper.generate_random_ignition_points(
+            self._generate_ignition_fn = lambda: self.helper.generate_random_ignition_points(
                 num_points=num_ignition_points,
             )
         else:
             assert (
                 len(ignition_points) == 1
             ), "We don't know what happens with multiple ignition points"
-            self.ignition_points = ignition_points
+            self._generate_ignition_fn = lambda: ignition_points
+        self.ignition_points = self._generate_ignition_fn()
 
         # Set action and observation spaces.
         self.action_type = action_type
@@ -350,6 +351,15 @@ class FireEnv(Env):
         """Reset environment and restart process"""
         self.iter = 0
         self.state = np.zeros((self.height, self.width), dtype=np.uint8)
+
+        # Reset ignition points - if random will set it to random
+        old_ignition_points = self.ignition_points
+        self.ignition_points = self._generate_ignition_fn()
+
+        # Overwrite ignition points CSV as that is how we communicate to cell2fire
+        if self.ignition_points != old_ignition_points:
+            self.helper.overwrite_ignition_points(self.ignition_points)
+
         # Kill and respawn Cell2Fire process
         self.fire_process.reset()
 

@@ -69,6 +69,7 @@ def main(args):
         output_dir=outdir,
         max_steps=500,
         ignition_points=MAP_TO_IGNITION_POINTS.get(args.map, None),
+        action_radius=1,
         # verbose=True,
         **MAP_TO_EXTRA_KWARGS.get(
             args.map, {"steps_before_sim": 50, "steps_per_action": 10}
