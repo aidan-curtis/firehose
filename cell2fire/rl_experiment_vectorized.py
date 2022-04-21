@@ -271,7 +271,7 @@ if __name__ == "__main__":
         help="Agent gamma"
     )
     parser.add_argument(
-        "-ar",
+        "-acr",
         "--action_radius",
         default=1,
         type=int,
