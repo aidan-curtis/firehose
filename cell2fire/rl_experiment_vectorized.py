@@ -100,6 +100,15 @@ def main(
     print("Total timesteps:", total_timesteps)
     print("Checkpoint freq:", checkpoint_save_freq)
 
+
+    observation_type = None
+    if args.architecture == "CnnPolicy":
+        model_kwargs = {"features_extractor_class": PaddedNatureCNN}
+        observation_type = "forest_rgb"
+    else:
+        model_kwargs = {}
+        observation_type = "forest"
+
     # Set the log directory to be a combination of the hyperparameters
     tf_logdir = "{}/{}_{}_{}_{}_{}".format(
         tf_logdir, args.algo, args.map, args.ignition_type, args.action_space, args.seed
@@ -118,6 +127,7 @@ def main(
             action_radius=args.action_radius,
             fire_map=args.map,
             output_dir=outdir,
+            observation_type=observation_type,
             **MAP_TO_EXTRA_KWARGS[args.map],
         )
     elif args.ignition_type == "random":
@@ -125,6 +135,7 @@ def main(
             action_type=args.action_space, 
             action_radius=args.action_radius,
             fire_map=args.map,
+            observation_type=observation_type,
             output_dir=outdir
         )
     else:
@@ -135,12 +146,6 @@ def main(
 
     # model = DDPG("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ddpg_static_7")
     tf_logdir = f'{tf_logdir}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
-
-    print(args.architecture)
-    if args.architecture == "CnnPolicy":
-        model_kwargs = {"features_extractor_class": PaddedNatureCNN}
-    else:
-        model_kwargs = {}
 
     if args.algo == "ppo":
         # model = PPO(args.architecture, env, features_extractor_class = PaddedNatureCNN, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
@@ -172,7 +177,7 @@ def main(
         )
     elif args.algo == "random":
         model = RandomAlgorithm(
-            args.architecture, env, verbose=1, tensorboard_log=tf_logdir
+            args.architecture, env, verbose=1, tensorboard_log=tf_logdir, 
         )
     elif args.algo == "naive":
         model = NaiveAlgorithm(
