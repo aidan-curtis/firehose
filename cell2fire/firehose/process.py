@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Union
 
 from firehose.config import debug_mode, training_enabled
-from firehose.models import IgnitionPoints
+from firehose.helpers import IgnitionPoints
 
 if TYPE_CHECKING:
     # Workaround for circular imports as I can't be bothered refactoring

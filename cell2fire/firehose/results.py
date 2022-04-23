@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 import numpy as np
 
-from firehose.models import IgnitionPoint, IgnitionPoints
+from firehose.helpers import IgnitionPoint, IgnitionPoints
 
 if TYPE_CHECKING:
     # Can't be bothered fixing any circular imports we might get so put this here

@@ -9,7 +9,7 @@ from gym import Env, spaces
 from gym.spaces import Box, Discrete
 
 from firehose.config import training_enabled
-from firehose.models import ExperimentHelper, IgnitionPoints
+from firehose.helpers import ExperimentHelper, IgnitionPoints
 from firehose.process import Cell2FireProcess
 from firehose.rewards import FireSizeReward
 from firehose.utils import wait_until_file_populated

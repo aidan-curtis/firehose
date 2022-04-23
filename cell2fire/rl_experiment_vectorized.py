@@ -14,7 +14,7 @@ import os
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from firehose.models import ExperimentHelper, IgnitionPoints, IgnitionPoint
+from firehose.helpers import ExperimentHelper, IgnitionPoints, IgnitionPoint
 import argparse
 import torch as th
 import gym

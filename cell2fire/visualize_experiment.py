@@ -7,7 +7,7 @@ from stable_baselines3 import PPO
 from stable_baselines3 import PPO
 
 from cell2fire.gym_env import FireEnv
-from firehose.models import IgnitionPoints, IgnitionPoint
+from firehose.helpers import IgnitionPoints, IgnitionPoint
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

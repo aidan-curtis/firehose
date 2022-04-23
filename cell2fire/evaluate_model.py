@@ -13,7 +13,7 @@ from firehose.baselines import (
     NoAlgorithm,
     RandomAlgorithm,
 )
-from firehose.models import IgnitionPoint, IgnitionPoints
+from firehose.helpers import IgnitionPoint, IgnitionPoints
 from firehose.results import FirehoseResults
 from firehose.video_recorder import FirehoseVideoRecorder
 
