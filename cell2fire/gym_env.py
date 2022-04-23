@@ -137,6 +137,11 @@ class FireEnv(Env):
         #  Reward function uses the env state, etc. to compute rewards.
         self.reward_func = reward_func_cls(self)
 
+        # Counters - indexed by (y, x) coordinates for now
+        self.cells_harvested: Set = set()  # cells harvested (i.e., actions)
+        self.cells_burned: Set = set()  # cells burned or burning on fire)
+        self.cells_on_fire: Set = set()  # cells currently on fire
+
         # Note: Cell2Fire Process. Call this at the end of __init__ once everything in
         #  env itself is setup!
         self.fire_process = Cell2FireProcess(env=self, verbose=verbose)
@@ -160,10 +165,7 @@ class FireEnv(Env):
             # Forest as a RGB image
             # TODO: should we normalize the RGB image? At least divide by 255 so its [0, 1]
             self.observation_space = spaces.Box(
-                low=0,
-                high=255,
-                shape=(self.height, self.width, 3),
-                dtype=np.uint8,
+                low=0, high=255, shape=(self.height, self.width, 3), dtype=np.uint8,
             )
         elif self.observation_type == "forest":
             # Forest as -1 (harvested), 0 (nothing), 1 (on fire)
@@ -173,10 +175,7 @@ class FireEnv(Env):
         elif self.observation_space == "time":
             # Blind model
             self.observation_space = spaces.Box(
-                low=0,
-                high=self.max_steps + 1,
-                shape=(1,),
-                dtype=np.uint8,
+                low=0, high=self.max_steps + 1, shape=(1,), dtype=np.uint8,
             )
         else:
             raise ValueError(f"Unsupported observation type {self.observation_type}")
@@ -236,6 +235,21 @@ class FireEnv(Env):
         else:
             raise ValueError(f"Unsupported action type {self.action_type}")
 
+    def _update_counters(self):
+        """ Update the counters based on the current state of the forest"""
+        harvested = set(zip(*np.where(self.state == -1)))
+        on_fire = set(zip(*np.where(self.state == 1)))
+
+        self.cells_harvested.update(harvested)
+        self.cells_burned.update(on_fire)
+        self.cells_on_fire = on_fire
+
+        # Sanity check that the number of total cells burned/burning is equal to
+        # number of cells on fire + number of cells we harvested
+        assert len(self.cells_on_fire) + len(self.cells_harvested) == len(
+            self.cells_burned
+        )
+
     def step(self, action):
         """
         Step in the environment
@@ -283,6 +297,7 @@ class FireEnv(Env):
         wait_until_file_populated(state_file)
         df = pd.read_csv(state_file, sep=",", header=None)
         self.state = df.values
+        self._update_counters()
 
         reward = self.reward_func()
 
@@ -359,6 +374,11 @@ class FireEnv(Env):
         # Overwrite ignition points CSV as that is how we communicate to cell2fire
         if self.ignition_points != old_ignition_points:
             self.helper.overwrite_ignition_points(self.ignition_points)
+
+        # Reset counters
+        self.cells_harvested = set()
+        self.cells_burned = set()
+        self.cells_on_fire = set()
 
         # Kill and respawn Cell2Fire process
         self.fire_process.reset()

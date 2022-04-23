@@ -21,7 +21,7 @@ from firehose.video_recorder import FirehoseVideoRecorder
 MAP_TO_IGNITION_POINTS = {
     "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])
 }
-MAP_TO_EXTRA_KWARGS = {"Sub40x40": {"steps_before_sim": 30, "steps_per_action": 3}}
+MAP_TO_EXTRA_KWARGS = {"Sub40x40": {"steps_before_sim": 50, "steps_per_action": 3}}
 
 # Algorithms we support
 SB3_ALGO_TO_MODEL_CLASS = {
@@ -111,10 +111,9 @@ def main(args):
 
         results.append(
             reward=reward,
-            # TODO: extract cell info from env
-            cells_harvested=0,
-            cells_on_fire=0,
-            cells_burned=0,
+            cells_harvested=len(env.cells_harvested),
+            cells_on_fire=len(env.cells_on_fire),
+            cells_burned=len(env.cells_burned),
             sim_steps=env.iter,
             ignition_points=env.ignition_points,
         )
@@ -133,7 +132,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-al",
         "--algo",
-        default="a2c",
+        default="naive",
         help="Specifies the RL algorithm to use",
         choices=set(SUPPORTED_ALGOS),
     )
@@ -146,7 +145,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p",
         "--model_path",
-        default="vectorize_model_2022-04-20_21-17-16/a2c_final.zip",
+        type=str,
         help="Specifies the path to the model to evaluate",
     )
     parser.add_argument(

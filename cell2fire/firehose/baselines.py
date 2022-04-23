@@ -49,7 +49,7 @@ class NoAlgorithm(FlatActionSpaceAlgorithm):
 
 
 class HumanInputAlgorithm(FlatActionSpaceAlgorithm):
-    """Read in human input from stdin"""
+    """Read in human input from stdin, indexed from 0! (not 1)"""
 
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
         human_actions_str = input("Input actions:")
