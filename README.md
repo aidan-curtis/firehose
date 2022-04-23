@@ -32,6 +32,13 @@ cd ~/firehose/cell2fire/Cell2FireC
 make -f Makefile_supercloud
 ```
 
+After this, you can drop into an interactive shell `LLsub -i`, load the conda env `module load anaconda/2022a`,
+and install the required dependencies with `pip install -r requirements.txt`
+
+Command to check it is all working: `python cell2fire/evaluate_model.py --disable-video --disable-render`
+
+**Text Installation Instructions:**
+
 1. ssh into Supercloud and `cd ~/` into your home directory if not already there
 2. Clone the `firehose` repo, use https if you don't have ssh keys setup otherwise Github complains
     - `git clone https://github.com/aidan-curtis/firehose.git`
