@@ -276,7 +276,7 @@ class FireEnv(Env):
 
         if not csv_files:
             # Haven't encountered this state yet so lmk if you do
-            if not self.fire_process.finished:
+            if self.fire_process.finished:
                 raise RuntimeError(
                     f"Fire process finished but no csv files. You broke the code!"
                 )
@@ -286,7 +286,11 @@ class FireEnv(Env):
             print("CSV files are empty")
             # print("State file:", state_file)
             print("Proc Error. Resetting state")
-            raise NotImplementedError
+
+            # FIXME: it seems like cell2fire process finishes when waiting for an
+            #  input action on very rare occassions. We won't worry about this for now
+            # raise NotImplementedError
+            
             obs = self.get_observation()
             reward = self.reward_func()
             return obs, reward, True, {}
