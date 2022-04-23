@@ -1,5 +1,16 @@
+import argparse
+import json
 import os
+import random
+import string
 import time
+
+
+class ArgparseEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, argparse.Namespace):
+            return obj.__dict__
+        return super().default(obj)
 
 
 def wait_until_file_populated(
@@ -14,3 +25,7 @@ def wait_until_file_populated(
         if time.perf_counter() - start_time > timeout:
             raise RuntimeError(f"Timed out waiting for {f_path} to be populated.")
         time.sleep(wait_time)
+
+
+def random_string(length: int) -> str:
+    return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))

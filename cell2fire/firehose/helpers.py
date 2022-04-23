@@ -10,6 +10,7 @@ from typing import ClassVar, List, Optional
 import numpy as np
 
 from cell2fire.utils.ReadDataPrometheus import Dictionary
+from firehose.utils import random_string
 
 _NO_FUEL_STR: str = "NFnfuel"
 
@@ -63,7 +64,7 @@ class ExperimentHelper:
 
     @cached_property
     def random_seed(self) -> str:
-        return "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        return random_string(6)
 
     @property
     def binary_path(self) -> str:

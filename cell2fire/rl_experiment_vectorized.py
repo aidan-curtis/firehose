@@ -1,188 +1,189 @@
+import argparse
+import json
+import os
 from datetime import datetime
 
-from stable_baselines3 import PPO, A2C, DQN
-from sb3_contrib.trpo.trpo import TRPO
+from evaluate_model import (
+    MAP_TO_EXTRA_KWARGS,
+    MAP_TO_IGNITION_POINTS,
+    SB3_ALGO_TO_MODEL_CLASS,
+)
+from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-from evaluate_model import MAP_TO_IGNITION_POINTS, MAP_TO_EXTRA_KWARGS, SUPPORTED_ALGOS
-from firehose.config import set_training_enabled, set_debug_mode
 from cell2fire.gym_env import FireEnv
-import os
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.results_plotter import load_results, ts2xy
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-from firehose.helpers import ExperimentHelper, IgnitionPoints, IgnitionPoint
-import argparse
-import torch as th
-import gym
-from stable_baselines3.common.torch_layers import (
-    BaseFeaturesExtractor,
-    CombinedExtractor,
-    FlattenExtractor,
-    MlpExtractor,
-    NatureCNN,
-    create_mlp,
-)
-from stable_baselines3.common.preprocessing import (
-    get_action_dim,
-    is_image_space,
-    maybe_transpose,
-    preprocess_obs,
-)
-from torch import nn
-from typing import Callable
-
+from firehose.config import set_training_enabled
 from firehose.models import PaddedNatureCNN
+from firehose.utils import ArgparseEncoder
 
 set_training_enabled(True)
 
 
-def main(
-    args,
-    total_timesteps=3_000_000,
-    checkpoint_save_freq=int(2_000_000 / 100),
-    should_eval=False,
-):
-    tf_logdir = args.logdir
+class Trainer:
+    def __init__(self, args):
+        """ Process args to setup trainer """
+        self.args = args
+        self.total_timesteps = args.train_steps
+        self.checkpoint_save_freq = int(self.total_timesteps / 100)
 
-    model_save_dir = f'./vectorize_model_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
-    print("Saving checkpoints to", model_save_dir)
-    print("Total timesteps:", total_timesteps)
-    print("Checkpoint freq:", checkpoint_save_freq)
+        # Determine observation type for the architecture and model kwargs
+        if args.architecture == "CnnPolicy":
+            self.model_kwargs = {"features_extractor_class": PaddedNatureCNN}
+            self.observation_type = "forest_rgb"
+        else:
+            # MlpPolicy needs just forest -1,0,1 observations
+            assert args.architecture == "MlpPolicy"
+            self.model_kwargs = {}
+            self.observation_type = "forest"
 
-    observation_type = None
-    if args.architecture == "CnnPolicy":
-        model_kwargs = {"features_extractor_class": PaddedNatureCNN}
-        observation_type = "forest_rgb"
-    else:
-        model_kwargs = {}
-        observation_type = "forest"
-
-    # Set the log directory to be a combination of the hyperparameters
-    tf_logdir = "{}/{}_{}_{}_{}_{}".format(
-        tf_logdir, args.algo, args.map, args.ignition_type, args.action_space, args.seed
-    )
-    outdir = (
-        os.environ["TMPDIR"]
-        if "TMPDIR" in os.environ.keys()
-        else os.path.dirname(os.path.realpath(__file__))
-    )
-
-    if args.ignition_type == "fixed":
-        ig_points = MAP_TO_IGNITION_POINTS[args.map]
-        single_env = lambda: FireEnv(
-            ignition_points=ig_points,
-            action_type=args.action_space,
-            action_radius=args.action_radius,
-            fire_map=args.map,
-            output_dir=outdir,
-            observation_type=observation_type,
-            **MAP_TO_EXTRA_KWARGS[args.map],
+        # Unique ID for this training run, used by tensorboard
+        self.unique_id = (
+            f"{args.algo}_{args.architecture}_{args.map}_{args.ignition_type}_"
+            f"{args.action_space}_{args.seed}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
-    elif args.ignition_type == "random":
-        single_env = lambda: FireEnv(
-            action_type=args.action_space,
-            action_radius=args.action_radius,
-            fire_map=args.map,
-            observation_type=observation_type,
-            output_dir=outdir,
+        set_random_seed(args.seed)
+
+        # Where we save the model checkpoints and self dump JSON
+        self.train_log_dir = os.path.join("train_logs", self.unique_id)
+
+        # Set the log directory for tensorboard
+        self.tf_logdir = os.path.join(args.tf_logdir, self.unique_id)
+
+        # Output directory of cell2fire itself with all the Forest CSVs.
+        # We don't really want to save these for future use
+        self.out_dir = (
+            # On supercloud TMPDIR is the slurm job directory
+            os.environ["TMPDIR"]
+            if "TMPDIR" in os.environ.keys()
+            else os.path.dirname(os.path.realpath(__file__))
         )
-    else:
-        raise NotImplementedError
 
-    # Need to use use SubprocVecEnv so its parallelized. DummyVecEnv is sequential on a single core
-    env = make_vec_env(single_env, n_envs=args.num_processes, vec_env_cls=SubprocVecEnv)
+        # Print debug info
+        print("Args:", json.dumps(args.__dict__, indent=2))
+        print("Saving checkpoints to", self.train_log_dir)
+        print("Checkpoint frequency:", self.checkpoint_save_freq)
+        print("cell2fire output directory:", self.out_dir)
+        print("Tensorboard logdir:", self.tf_logdir)
+        print("========================================")
 
-    # model = DDPG("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ddpg_static_7")
-    tf_logdir = f'{tf_logdir}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+        print("Model kwargs:", json.dumps(self.model_kwargs, indent=2))
+        print("Observation type:", self.observation_type)
+        print("Total train timesteps:", self.total_timesteps)
 
-    if args.algo == "ppo":
-        # model = PPO(args.architecture, env, features_extractor_class = PaddedNatureCNN, verbose=1, tensorboard_log=tf_logdir, policy_kwargs=model_kwargs)
-        model = PPO(
-            args.architecture,
-            env,
-            verbose=1,
-            tensorboard_log=tf_logdir,
-            gamma=args.gamma,
-            policy_kwargs=model_kwargs,
-        )
-    elif args.algo == "a2c":
-        model = A2C(
-            args.architecture,
-            env,
-            verbose=1,
-            tensorboard_log=tf_logdir,
-            gamma=args.gamma,
-            policy_kwargs=model_kwargs,
-        )
-    elif args.algo == "trpo":
-        model = TRPO(
-            args.architecture,
-            env,
-            verbose=1,
-            tensorboard_log=tf_logdir,
-            gamma=args.gamma,
-            policy_kwargs=model_kwargs,
-        )
-    elif args.algo == "random":
-        model = RandomAlgorithm(
-            args.architecture, env, verbose=1, tensorboard_log=tf_logdir,
-        )
-    elif args.algo == "naive":
-        model = NaiveAlgorithm(
-            args.architecture, env, verbose=1, tensorboard_log=tf_logdir
-        )
-    elif args.algo == "dqn":
-        model = DQN(args.architecture, env, verbose=1, tensorboard_log=tf_logdir)
-    else:
-        raise NotImplementedError
+        self._dump_to_json()
 
-    # Example of how to load pre-trained model
-    # model = A2C.load("vectorize_model_2022-04-20_13-30-27/a2c_final.zip", env, verbose=1, tensorboard_log=tf_logdir)
-    print("Tensorboard logdir:", tf_logdir)
+    def _dump_to_json(self):
+        """ Dump self to JSON"""
+        if os.path.exists(self.train_log_dir):
+            raise RuntimeError(
+                f"Train log directory {self.train_log_dir} already exists"
+            )
 
-    checkpoint_callback = CheckpointCallback(
-        save_freq=checkpoint_save_freq, save_path=model_save_dir
-    )
+        os.makedirs(self.train_log_dir)
+        log_fname = os.path.join(self.train_log_dir, "train_args.json")
 
-    ####
-    try:
-        model.learn(total_timesteps=total_timesteps, callback=[checkpoint_callback])
-    except Exception as e:
-        model.save(os.path.join(model_save_dir, f"{args.algo}_final.zip"))
-        raise e
+        # Write params to JSON
+        with open(log_fname, "w") as f:
+            json.dump(self.__dict__, f, cls=ArgparseEncoder, indent=2)
+        print("Wrote train params to", log_fname)
 
-    model.save(os.path.join(model_save_dir, f"{args.algo}_final.zip"))
-    #####
-    env.close()
-
-    # Create new env for evaluation that isn't vectorized
-    if should_eval:
-
+    def _get_env(self):
+        """ Get the environment based on the ignition type """
+        args = self.args
         if args.ignition_type == "fixed":
-            eval_env = lambda: FireEnv(
+            ig_points = MAP_TO_IGNITION_POINTS[args.map]
+            single_env = lambda: FireEnv(
                 ignition_points=ig_points,
                 action_type=args.action_space,
+                action_radius=args.action_radius,
                 fire_map=args.map,
+                output_dir=self.out_dir,
+                observation_type=self.observation_type,
+                **MAP_TO_EXTRA_KWARGS[args.map],
             )
+            return single_env
         elif args.ignition_type == "random":
-            eval_env = lambda: FireEnv(action_type=args.action_space, fire_map=args.map)
+            single_env = lambda: FireEnv(
+                action_type=args.action_space,
+                action_radius=args.action_radius,
+                fire_map=args.map,
+                observation_type=self.observation_type,
+                output_dir=self.out_dir,
+            )
+            return single_env
         else:
-            raise NotImplementedError(f"Unsupported ignition type {args.ignition_type}")
+            raise NotImplementedError
 
-        obs = eval_env.reset()
-        for i in range(1000):
-            action, _states = model.predict(obs, deterministic=True)
-            obs, reward, done, info = eval_env.step(action)
-            eval_env.render()
-            if done:
-                obs = eval_env.reset()
-        eval_env.close()
+    def _get_model(self, env):
+        args = self.args
 
-    print("Done!")
+        # Check if we need to reload from checkpoint
+        if args.resume_from:
+            if not os.path.exists(args.resume_from):
+                raise ValueError(f"Checkpoint {args.resume_from} does not exist")
+            # TODO: figure out passing gamma, model kwargs, etc. in clean way
+            raise NotImplementedError("Resuming from checkpoint not implemented")
+
+        # If no reload specified then just create a new model
+        if args.algo in {"ppo", "a2c", "trpo"}:
+            model = SB3_ALGO_TO_MODEL_CLASS[args.algo](
+                args.architecture,
+                env,
+                verbose=1,
+                tensorboard_log=self.tf_logdir,
+                gamma=args.gamma,
+                policy_kwargs=self.model_kwargs,
+            )
+            return model
+        elif args.algo == "dqn":
+            # DQN doesn't support gamma so handle separately
+            model = DQN(
+                args.architecture, env, verbose=1, tensorboard_log=self.tf_logdir
+            )
+            return model
+        else:
+            raise NotImplementedError
+
+    def evaluate(self):
+        # FIXME: should we bother? Can just use evaluate_model.py script
+        raise NotImplementedError
+
+    def train(self):
+        args = self.args
+
+        # Need to use use SubprocVecEnv so its parallelized. DummyVecEnv is sequential on a single core
+        single_env = self._get_env()
+        env = make_vec_env(
+            single_env, n_envs=args.num_processes, vec_env_cls=SubprocVecEnv
+        )
+
+        # Get the model and setup checkpointing
+        model = self._get_model(env)
+        checkpoint_callback = CheckpointCallback(
+            save_freq=self.checkpoint_save_freq, save_path=self.train_log_dir
+        )
+
+        # Train the model
+        try:
+            model.learn(
+                total_timesteps=self.total_timesteps, callback=[checkpoint_callback]
+            )
+        except Exception as e:
+            model.save(os.path.join(self.train_log_dir, f"{args.algo}_final.zip"))
+            raise e
+
+        # Save the final model
+        model.save(os.path.join(self.train_log_dir, f"{args.algo}_final.zip"))
+        env.close()
+        print("Done!")
+
+
+def train(args):
+    trainer = Trainer(args)
+    trainer.train()
 
 
 if __name__ == "__main__":
@@ -192,7 +193,7 @@ if __name__ == "__main__":
         "--algo",
         default="a2c",
         help="Specifies the RL algorithm to use",
-        choices=SUPPORTED_ALGOS,
+        choices=set(SB3_ALGO_TO_MODEL_CLASS.keys()),
     )
     parser.add_argument(
         "-m",
@@ -209,7 +210,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-i",
         "--ignition_type",
-        default="fixed",
+        default="random",
         help="Specifies whether to use a random or fixed fire ignitinon point",
         choices={"fixed", "random"},
     )
@@ -220,27 +221,31 @@ if __name__ == "__main__":
         help="Action space type",
         choices=FireEnv.ACTION_TYPES,
     )
+    parser.add_argument("-g", "--gamma", default=0.99, type=float, help="Agent gamma")
     parser.add_argument(
-        "-g",
-        "--gamma",
-        default=0.99,
-        type=float,
-        help="Agent gamma"
+        "-acr", "--action_radius", default=1, type=int, help="Action radius"
     )
     parser.add_argument(
-        "-acr",
-        "--action_radius",
-        default=1,
+        "-t", "--train_steps", default=10000, type=int, help="Number of training steps",
+    )
+    parser.add_argument("-s", "--seed", default=0, type=int, help="RL seed")
+    parser.add_argument(
+        "-n",
+        "--num-processes",
+        default=16,
         type=int,
-        help="Action radius"
-    )
-    parser.add_argument("-s", "--seed", default="0", help="RL seed")
-    parser.add_argument(
-        "-n", "--num-processes", default=16, type=int, help="Number of parallel processes"
+        help="Number of parallel processes",
     )
     parser.add_argument(
-        "-l", "--logdir", default=f"/home/gridsan/{os.environ['USER']}/firehosetmp", help="Logdir"
+        "--resume-from", type=str, help="Resume training from checkpoint"
     )
-    # parser.add_argument("-l", "--logdir", default="/tmp/firehose", help="Logdir")
-    args = parser.parse_args()
-    main(args)
+    parser.add_argument(
+        "-l",
+        "--tf_logdir",
+        default=f"/home/gridsan/{os.environ['USER']}/firehosetmp",
+        help="Logdir for Tensorboard",
+    )
+    # parser.add_argument(
+    #     "-l", "--tf_logdir", default="/tmp/firehose", help="Logdir for Tensorboard"
+    # )
+    train(args=parser.parse_args())

@@ -39,3 +39,6 @@ __pycache__
 *.mp4
 *.meta.json
 evaluation_results/
+train_logs/
+train_args.json
+

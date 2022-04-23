@@ -290,7 +290,7 @@ class FireEnv(Env):
             # FIXME: it seems like cell2fire process finishes when waiting for an
             #  input action on very rare occassions. We won't worry about this for now
             # raise NotImplementedError
-            
+
             obs = self.get_observation()
             reward = self.reward_func()
             return obs, reward, True, {}
