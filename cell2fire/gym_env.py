@@ -126,8 +126,8 @@ class FireEnv(Env):
         # Mapping of flattened index (0-indexed) to y,x coordinates (i.e. row and column)
         self.flatten_idx_to_yx: Dict[int, Tuple[int, int]] = {
             x + y * self.width: (y, x)
-            for x in range(self.width)
             for y in range(self.height)
+            for x in range(self.width)
         }
         self.yx_to_flatten_idx: Dict[Tuple[int, int], int] = {
             yx: idx for idx, yx, in self.flatten_idx_to_yx.items()

@@ -69,44 +69,60 @@ class NaiveAlgorithm(FlatActionSpaceAlgorithm):
 
     def __init__(self, env: FireEnv):
         super().__init__(env)
-        self.prev_actions: Set[int] = {-1}
-
         assert (
             len(env.ignition_points.points) == 1
         ), "Only 1 ignition point supported for naive algorithm"
-        self.ignition_point = env.ignition_points.points[0]
 
-        # subtract 1 to convert to 0-indexed
+        self.prev_actions: Set[int] = {-1}
+        self.ignition_point = self.env.ignition_points.points[0]
         self.ignition_point_yx = self.env.flatten_idx_to_yx[self.ignition_point.idx - 1]
 
+    def _update_ignition_point(self):
+        """ Update ignition point if it has changed, indicating a reset in the environment """
+        current_ignition_point = self.env.ignition_points.points[0]
+
+        if current_ignition_point != self.ignition_point:
+            print(
+                "NaiveAlgorithm: Ignition point changed from "
+                f"{self.ignition_point} to {current_ignition_point}"
+            )
+            self.ignition_point = current_ignition_point
+            # subtract 1 to convert to 0-indexed
+            self.ignition_point_yx = self.env.flatten_idx_to_yx[
+                current_ignition_point.idx - 1
+            ]
+
+            # Reset prev actions
+            self.prev_actions = {-1}
+
     def predict(self, obs, **kwargs) -> Tuple[Any, Any]:
-        cells_on_fire = self.env.state == 1
+        # Important! Check if ignition point has changed, indicating reset in env
+        self._update_ignition_point()
 
         # Find the cell closest on fire to the ignition point that has not
         # already had an action taken
+        cells_on_fire = self.env.state == 1
         fire_yx = list(zip(*np.where(cells_on_fire)))
         dist = [
             np.linalg.norm(np.array(yx) - np.array(self.ignition_point_yx))
             for yx in fire_yx
         ]
 
-        chosen_fire_idx = -1
-        while chosen_fire_idx == -1:
-            # Exhausted all other choices so do a no-op
-            if not dist:
-                return -1, None
+        if not dist:
+            # No cells on fire so no-op
+            return -1, None
 
-            closest_idx = np.argmin(dist)
-            chosen_fire_yx = fire_yx[closest_idx]
-            chosen_fire_idx = self.env.yx_to_flatten_idx[chosen_fire_yx]
-            del fire_yx[closest_idx]
-            del dist[closest_idx]
+        # Choose closest cell on fire
+        closest_idx = np.argmin(dist)
+        chosen_fire_yx = fire_yx[closest_idx]
+        chosen_fire_idx = self.env.yx_to_flatten_idx[chosen_fire_yx]
 
+        # Check if this cell has already been chosen
         if chosen_fire_idx in self.prev_actions and chosen_fire_idx != -1:
-            print("chosen", chosen_fire_idx)
-            print("prev actions", self.prev_actions)
+            print("Chosen:", chosen_fire_idx)
+            print("Prev Actions:", self.prev_actions)
             raise NotImplementedError(
-                "very unexpected case where a fire put out has recaught fire"
+                "Unexpected case where a fire put out has recaught fire"
             )
 
         self.prev_actions.add(chosen_fire_idx)

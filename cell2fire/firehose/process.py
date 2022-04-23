@@ -1,4 +1,5 @@
 import subprocess
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Union
 
 from firehose.config import debug_mode, training_enabled
@@ -79,8 +80,13 @@ class Cell2FireProcess:
         while result != "Input action":
             result = self.read_line()
             if result == "" and self.process.poll() is not None:
-                # Process has finished
-                assert self.finished, "Process finished but not marked as finished"
+                # Process should have finished, we'll let parent caller
+                # handle the checking and exception raising
+                if not self.finished:
+                    self.write_lines_to_log()
+                    print("WARNING! Process finished but not marked as finished")
+
+                # Break as nothing else to read
                 break
 
             if self.verbose:
@@ -119,6 +125,15 @@ class Cell2FireProcess:
     def write_actions(self, actions_encoded: bytes):
         self.process.stdin.write(actions_encoded)
         self.process.stdin.flush()
+
+    def write_lines_to_log(self, log_fname: str = "/tmp/firehose_process.log"):
+        date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        # Append lines to log file
+        with open(log_fname, "a") as f:
+            f.write(f"Cell2Fire Process Log for {date_str}\n")
+            for line in self.lines:
+                f.write(line + "\n")
+            f.write(f"End of log for {date_str}")
 
     def kill(self):
         if self.process:

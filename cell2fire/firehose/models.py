@@ -182,7 +182,7 @@ class ExperimentHelper:
 
         height, width = self.forest_non_fuel.shape
         flatten_idx_to_yx = {
-            x + y * width: (y, x) for x in range(width) for y in range(height)
+            x + y * width: (y, x) for y in range(height) for x in range(width)
         }
 
         # Set radius class variable
