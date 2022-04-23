@@ -35,55 +35,9 @@ from stable_baselines3.common.preprocessing import (
 from torch import nn
 from typing import Callable
 
-# TODO: make this global variable better
+from firehose.models import PaddedNatureCNN
+
 set_training_enabled(True)
-num_cpu = 16
-
-
-class PaddedNatureCNN(BaseFeaturesExtractor):
-    """
-    CNN from DQN nature paper:
-        Mnih, Volodymyr, et al.
-        "Human-level control through deep reinforcement learning."
-        Nature 518.7540 (2015): 529-533.
-    :param observation_space:
-    :param features_dim: Number of features extracted.
-        This corresponds to the number of unit for the last layer.
-    """
-
-    def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 512):
-        super(PaddedNatureCNN, self).__init__(observation_space, features_dim)
-        # We assume CxHxW images (channels first)
-        # Re-ordering will be done by pre-preprocessing or wrapper
-        assert is_image_space(observation_space, check_channels=False), (
-            "You should use NatureCNN "
-            f"only with images not with {observation_space}\n"
-            "(you are probably using `CnnPolicy` instead of `MlpPolicy` or `MultiInputPolicy`)\n"
-            "If you are using a custom environment,\n"
-            "please check it using our env checker:\n"
-            "https://stable-baselines3.readthedocs.io/en/master/common/env_checker.html"
-        )
-        n_input_channels = observation_space.shape[0]
-        self.cnn = nn.Sequential(
-            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=1, stride=1),
-            nn.ReLU(),
-            nn.Flatten(),
-        )
-
-        # Compute shape by doing one forward pass
-        with th.no_grad():
-            n_flatten = self.cnn(
-                th.as_tensor(observation_space.sample()[None]).float()
-            ).shape[1]
-
-        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
-
-    def forward(self, observations: th.Tensor) -> th.Tensor:
-        return self.linear(self.cnn(observations))
 
 
 def main(
@@ -92,14 +46,12 @@ def main(
     checkpoint_save_freq=int(2_000_000 / 100),
     should_eval=False,
 ):
-
     tf_logdir = args.logdir
 
     model_save_dir = f'./vectorize_model_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
     print("Saving checkpoints to", model_save_dir)
     print("Total timesteps:", total_timesteps)
     print("Checkpoint freq:", checkpoint_save_freq)
-
 
     observation_type = None
     if args.architecture == "CnnPolicy":
@@ -132,17 +84,17 @@ def main(
         )
     elif args.ignition_type == "random":
         single_env = lambda: FireEnv(
-            action_type=args.action_space, 
+            action_type=args.action_space,
             action_radius=args.action_radius,
             fire_map=args.map,
             observation_type=observation_type,
-            output_dir=outdir
+            output_dir=outdir,
         )
     else:
         raise NotImplementedError
 
     # Need to use use SubprocVecEnv so its parallelized. DummyVecEnv is sequential on a single core
-    env = make_vec_env(single_env, n_envs=num_cpu, vec_env_cls=SubprocVecEnv)
+    env = make_vec_env(single_env, n_envs=args.num_processes, vec_env_cls=SubprocVecEnv)
 
     # model = DDPG("MlpPolicy", env, verbose=1, tensorboard_log="./tmp/ddpg_static_7")
     tf_logdir = f'{tf_logdir}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
@@ -177,7 +129,7 @@ def main(
         )
     elif args.algo == "random":
         model = RandomAlgorithm(
-            args.architecture, env, verbose=1, tensorboard_log=tf_logdir, 
+            args.architecture, env, verbose=1, tensorboard_log=tf_logdir,
         )
     elif args.algo == "naive":
         model = NaiveAlgorithm(
@@ -284,8 +236,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("-s", "--seed", default="0", help="RL seed")
     parser.add_argument(
-        "-l", "--logdir", default="/home/gridsan/acurtis/firehosetmp", help="Logdir"
+        "-n", "--num-processes", default=16, type=int, help="Number of parallel processes"
     )
-    # parser.add_argument("-l", "--logdir", default="/tmp/firehose", help="RL seed")
+    parser.add_argument(
+        "-l", "--logdir", default=f"/home/gridsan/{os.environ['USER']}/firehosetmp", help="Logdir"
+    )
+    # parser.add_argument("-l", "--logdir", default="/tmp/firehose", help="Logdir")
     args = parser.parse_args()
     main(args)

@@ -244,11 +244,12 @@ class FireEnv(Env):
         self.cells_burned.update(on_fire)
         self.cells_on_fire = on_fire
 
-        # Sanity check that the number of total cells burned/burning is equal to
+        # Sanity check that the number of total cells burned/burning is geq to
         # number of cells on fire + number of cells we harvested
-        assert len(self.cells_on_fire) + len(self.cells_harvested) == len(
+        if not len(self.cells_on_fire) + len(self.cells_harvested) >= len(
             self.cells_burned
-        )
+        ):
+            raise ValueError("#Cells burned < #Cells on fire + #Cells harvested")
 
     def step(self, action):
         """
