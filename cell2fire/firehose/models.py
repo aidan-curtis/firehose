@@ -1,4 +1,5 @@
 import gym
+import numpy as np
 import torch
 from stable_baselines3.common.preprocessing import is_image_space
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
@@ -49,3 +50,11 @@ class PaddedNatureCNN(BaseFeaturesExtractor):
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         return self.linear(self.cnn(observations))
+
+
+if __name__ == "__main__":
+    model = PaddedNatureCNN(
+        gym.spaces.Box(low=0, high=255, shape=(3, 40, 40), dtype=np.uint8,)
+    )
+    pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Total number of parameters for 40x40x3 image: {pytorch_total_params}")

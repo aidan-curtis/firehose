@@ -3,8 +3,10 @@ import json
 import os
 from typing import Optional
 
+import torch
 from sb3_contrib import TRPO
 from stable_baselines3 import A2C, DQN, PPO
+from torch import softmax
 
 from cell2fire.gym_env import FireEnv
 from firehose.baselines import (
@@ -77,9 +79,10 @@ def main(args):
             else None
         ),
         action_radius=1,
+        observation_type="forest_rgb",
         # verbose=True,
         **MAP_TO_EXTRA_KWARGS.get(
-            args.map, {"steps_before_sim": 50, "steps_per_action": 10}
+            args.map, {"steps_before_sim": 10, "steps_per_action": 10}
         ),
     )
 
@@ -90,6 +93,8 @@ def main(args):
     )
 
     results = FirehoseResults.from_env(env, args)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    action_mask = torch.ones((env.action_space.n,)).to(device)
 
     # Run policy until the end of the episode
     for _ in range(args.num_iters):
@@ -100,8 +105,23 @@ def main(args):
         done = False
         reward = None
         while not done:
-            action, _states = model.predict(obs, deterministic=True)
-            obs, reward, done, info = env.step(action)
+            action, _states = model.predict(obs, deterministic=False)
+
+            # Masked softmax to get probabilities and take mode - use logits so its more stable
+            processed_obs, vectorized = model.policy.obs_to_tensor(obs)
+            categorical_dist = model.policy.get_distribution(processed_obs)
+            action_dist = categorical_dist.distribution.probs.squeeze()
+            masked_action_dist = action_mask * action_dist
+
+            # Renormalize the probabilities
+            # new_action_dist = masked_action_dist / masked_action_dist.sum()
+            # new_action_dist = softmax(masked_action_logits, dim=0)
+            new_action = masked_action_dist.argmax().item()
+
+            print("===", new_action, "===")
+            obs, reward, done, info = env.step(new_action)
+            action_mask[new_action] = 0
+
             if not args.disable_render:
                 env.render()
             video_recorder.capture_frame()
@@ -132,19 +152,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "-al",
         "--algo",
-        default="naive",
+        default="a2c",
         help="Specifies the RL algorithm to use",
         choices=set(SUPPORTED_ALGOS),
     )
     parser.add_argument(
         "-m",
         "--map",
-        default="Sub40x40",
+        default="Sub20x20",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
         "-p",
         "--model_path",
+        default="a2c_final.zip",
         type=str,
         help="Specifies the path to the model to evaluate",
     )
@@ -178,7 +199,7 @@ if __name__ == "__main__":
         "-n",
         "--num-iters",
         type=int,
-        default=10,
+        default=1,
         help="Number of iterations to evaluate",
     )
     print("Args:", json.dumps(vars(parser.parse_args()), indent=2))
