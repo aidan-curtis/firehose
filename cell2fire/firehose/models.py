@@ -8,7 +8,8 @@ from functools import cached_property
 from typing import ClassVar, List, Optional
 
 import numpy as np
-from utils.ReadDataPrometheus import Dictionary
+
+from cell2fire.utils.ReadDataPrometheus import Dictionary
 
 _NO_FUEL_STR: str = "NFnfuel"
 

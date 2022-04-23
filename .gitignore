@@ -38,4 +38,4 @@ __pycache__
 *.zip
 *.mp4
 *.meta.json
-
+evaluation_results/

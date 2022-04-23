@@ -14,6 +14,11 @@ class Reward(ABC):
     def __init__(self, env: "FireEnv"):
         self.env = env
 
+    @classmethod
+    @abstractmethod
+    def name(cls) -> str:
+        raise NotImplementedError
+
     @abstractmethod
     def __call__(self) -> float:
         raise NotImplementedError
@@ -21,6 +26,10 @@ class Reward(ABC):
 
 class FireSizeReward(Reward):
     """Number of cells on fire essentially"""
+
+    @classmethod
+    def name(cls) -> str:
+        return "FireSizeReward"
 
     def __call__(self, scale: float = 10) -> float:
         """-(num cells on fire) / (total num cells in forest) * scale"""
