@@ -6,10 +6,12 @@ import string
 import time
 
 
-class ArgparseEncoder(json.JSONEncoder):
+class TrainerEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, argparse.Namespace):
             return obj.__dict__
+        elif isinstance(obj, type):
+            return str(obj)
         return super().default(obj)
 
 

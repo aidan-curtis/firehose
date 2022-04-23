@@ -17,7 +17,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from cell2fire.gym_env import FireEnv
 from firehose.config import set_training_enabled
 from firehose.models import PaddedNatureCNN
-from firehose.utils import ArgparseEncoder
+from firehose.utils import TrainerEncoder
 
 set_training_enabled(True)
 
@@ -42,7 +42,8 @@ class Trainer:
         # Unique ID for this training run, used by tensorboard
         self.unique_id = (
             f"{args.algo}_{args.architecture}_{args.map}_{args.ignition_type}_"
-            f"{args.action_space}_{args.seed}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+            f"{args.action_space}_seed={args.seed}_acr={args.action_radius}_"
+            f"gamma={args.gamma}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
         set_random_seed(args.seed)
 
@@ -87,7 +88,7 @@ class Trainer:
 
         # Write params to JSON
         with open(log_fname, "w") as f:
-            json.dump(self.__dict__, f, cls=ArgparseEncoder, indent=2)
+            json.dump(self.__dict__, f, cls=TrainerEncoder, indent=2)
         print("Wrote train params to", log_fname)
 
     def _get_env(self):
