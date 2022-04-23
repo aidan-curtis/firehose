@@ -1,3 +1,4 @@
+import os
 import subprocess
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Union
@@ -20,6 +21,19 @@ _VERBOSE_COMMAND_STR = "{binary} --input-instance-folder {input} --output-folder
 --weather rows --nweathers 1 --ROS-CV 0.5 --IgnitionRad {ignition_radius} --seed 123 --nthreads 1 \
 --ROS-Threshold 0.1 --HFI-Threshold 0.1 --steps-action {steps_per_action} --steps-before {steps_before_sim} --verbose \
 --HarvestPlan"
+
+
+def _get_log_name(date_str) -> str:
+    # Determine directory to log to
+    if os.path.exists("/home/gridsan"):
+        # We're on supercloud so hardcode
+        log_dir = f"/home/gridsan/{os.environ['USER']}/firehose/error_logs"
+    else:
+        log_dir = f"/tmp/firehose_error_logs"
+
+    os.makedirs(log_dir, exist_ok=True)
+    log_fname = f"{date_str}_firehose_process.log"
+    return os.path.join(log_dir, log_fname)
 
 
 class Cell2FireProcess:
@@ -126,14 +140,18 @@ class Cell2FireProcess:
         self.process.stdin.write(actions_encoded)
         self.process.stdin.flush()
 
-    def write_lines_to_log(self, log_fname: str = "/tmp/firehose_process.log"):
+    def write_lines_to_log(self):
         date_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        # Append lines to log file
-        with open(log_fname, "a") as f:
+        log_fname = _get_log_name(date_str)
+
+        # Write lines to log file
+        with open(log_fname, "w") as f:
             f.write(f"Cell2Fire Process Log for {date_str}\n")
             for line in self.lines:
                 f.write(line + "\n")
             f.write(f"End of log for {date_str}")
+
+        print(f"Wrote cell2fire process log to {log_fname}")
 
     def kill(self):
         if self.process:

@@ -276,9 +276,11 @@ class FireEnv(Env):
 
         if not csv_files:
             # Haven't encountered this state yet so lmk if you do
-            assert (
-                not self.fire_process.finished
-            ), "Fire process finished but no csv files"
+            if not self.fire_process.finished:
+                raise RuntimeError(
+                    f"Fire process finished but no csv files. You broke the code!"
+                )
+
             # No state and Cell2Fire didn't finish, so something went wrong
             print(action)
             print("CSV files are empty")
