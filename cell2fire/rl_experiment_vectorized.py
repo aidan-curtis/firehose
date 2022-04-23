@@ -70,7 +70,7 @@ class Trainer:
         print("Tensorboard logdir:", self.tf_logdir)
         print("========================================")
 
-        print("Model kwargs:", json.dumps(self.model_kwargs, indent=2))
+        print("Model kwargs:", self.model_kwargs)
         print("Observation type:", self.observation_type)
         print("Total train timesteps:", self.total_timesteps)
 
@@ -227,7 +227,7 @@ if __name__ == "__main__":
         "-acr", "--action_radius", default=1, type=int, help="Action radius"
     )
     parser.add_argument(
-        "-t", "--train_steps", default=10000, type=int, help="Number of training steps",
+        "-t", "--train_steps", default=5_000_000, type=int, help="Number of training steps",
     )
     parser.add_argument("-s", "--seed", default=0, type=int, help="RL seed")
     parser.add_argument(
