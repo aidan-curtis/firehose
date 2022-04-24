@@ -203,5 +203,5 @@ class ExperimentHelper:
                 for idx, point in enumerate(ignition_points)
             ]
         )
-        print("Sampled ignition points:", ignition_points)
+        # print("Sampled ignition points:", ignition_points)
         return ignition_points

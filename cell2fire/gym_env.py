@@ -292,7 +292,7 @@ class FireEnv(Env):
             # raise NotImplementedError
 
             obs = self.get_observation()
-            reward = self.reward_func()
+            reward = self.reward_func(action)
             return obs, reward, True, {}
         else:
             # Use last CSV as that is most recent forest
@@ -306,7 +306,7 @@ class FireEnv(Env):
         self.state = df.values
         self._update_counters()
 
-        reward = self.reward_func()
+        reward = self.reward_func(action)
 
         # Check if we've exceeded max steps or Cell2Fire finished simulating
         done = self.iter >= self.max_steps or self.fire_process.finished
@@ -386,6 +386,9 @@ class FireEnv(Env):
         self.cells_harvested = set()
         self.cells_burned = set()
         self.cells_on_fire = set()
+
+        # Reset reward function
+        self.reward_func.reset()
 
         # Kill and respawn Cell2Fire process
         self.fire_process.reset()
