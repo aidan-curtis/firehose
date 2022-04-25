@@ -13,7 +13,7 @@ do
 	do
 		for ignition_type in "random" # "fixed"
 		do
-			for action_radius in "1" "2" #"xy" 
+			for action_diameter in "1" #"2" #"xy"
 			do
 				for architecture in "MlpPolicy" "CnnPolicy"
 				do
@@ -22,7 +22,7 @@ do
 						for seed in "1"
 						do
 							if [ $((i)) -eq  $((SLURM_ARRAY_TASK_ID + 0)) ]; then
-								python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_radius="$action_radius" --seed=$seed --architecture="$architecture" --gamma="$gamma"
+								python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_diameter="$action_diameter" --seed=$seed --architecture="$architecture" --gamma="$gamma"
 							fi
 							i=$((i+1))
 					    done
