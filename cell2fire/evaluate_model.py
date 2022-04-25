@@ -76,11 +76,13 @@ def main(args):
             if args.ignition_type == "fixed"
             else None
         ),
-        action_diameter=1,
+        action_diameter=args.action_diameter,
         # verbose=True,
-        **MAP_TO_EXTRA_KWARGS.get(
-            args.map, {"steps_before_sim": 50, "steps_per_action": 10}
-        ),
+        steps_before_sim=args.steps_before_sim,
+        steps_per_action=args.steps_per_action,
+        # **MAP_TO_EXTRA_KWARGS.get(
+        #     args.map, {"steps_before_sim": 50, "steps_per_action": 10}
+        # ),
     )
 
     # Get the model for the algorithm and setup video recorder
@@ -154,6 +156,15 @@ if __name__ == "__main__":
         default="flat",
         help="Action space type",
         choices=FireEnv.ACTION_TYPES,
+    )
+    parser.add_argument(
+        "--steps_before_sim", type=int, default=30, help="Number of steps before sim starts"
+    ),
+    parser.add_argument(
+        "--steps_per_action", type=int, default=10, help="Number of steps per action"
+    )
+    parser.add_argument(
+        "-acd", "--action_diameter", default=1, type=int, help="Action diameter"
     )
     parser.add_argument(
         "--disable-video", action="store_true", help="Disable video recording"

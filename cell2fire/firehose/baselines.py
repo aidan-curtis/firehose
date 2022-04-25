@@ -121,9 +121,9 @@ class NaiveAlgorithm(FlatActionSpaceAlgorithm):
         if chosen_fire_idx in self.prev_actions and chosen_fire_idx != -1:
             print("Chosen:", chosen_fire_idx)
             print("Prev Actions:", self.prev_actions)
-            raise NotImplementedError(
-                "Unexpected case where a fire put out has recaught fire"
-            )
+            # This really shouldn't happen but if it happens just remove the exception
+            raise RuntimeError("Unexpected case where a fire put out has recaught fire")
+            # print("WARNING! Unexpected case where a fire put out has recaught fire")
 
         self.prev_actions.add(chosen_fire_idx)
         return chosen_fire_idx, None
