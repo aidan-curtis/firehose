@@ -76,7 +76,7 @@ def main(args):
             if args.ignition_type == "fixed"
             else None
         ),
-        action_radius=1,
+        action_diameter=1,
         # verbose=True,
         **MAP_TO_EXTRA_KWARGS.get(
             args.map, {"steps_before_sim": 50, "steps_per_action": 10}

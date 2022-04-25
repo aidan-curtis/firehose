@@ -45,7 +45,7 @@ class FireEnv(Env):
         num_ignition_points: int = 1,  # if ignition_points is specified this is ignored
         steps_before_sim: int = 0,
         steps_per_action: int = 1,
-        action_radius: int = 1,
+        action_diameter: int = 1,
         verbose: bool = False,
     ):
         """
@@ -61,7 +61,8 @@ class FireEnv(Env):
         :param steps_before_sim: number of steps to run before allowing any actions
         :param steps_per_action: number of steps to run after each action
             (is not run after pre-run steps)
-        :param action_radius: radius of action around its cell. Only 1,2 supported right now.
+        :param action_diameter: diameter of action around its cell. Only 1,2,3 supported right now.
+            Corresponds to 1x1, 2x2, 3x3 actions.
         :param verbose: verbose logging
         """
         # Current step idx
@@ -117,8 +118,8 @@ class FireEnv(Env):
 
         # Radius of action around cell. If 1 then just affects cell itself,
         # if 2, then it affects 3x3 area around cell, etc.
-        assert action_radius in {1, 2}, "Only 1 and 2 action radius supported"
-        self.action_radius = action_radius
+        assert action_diameter in {1, 2}, "Only 1 and 2 action radius supported"
+        self.action_diameter = action_diameter
 
         # Verbose logging in gym env and subprocess
         self.verbose = verbose
@@ -192,19 +193,34 @@ class FireEnv(Env):
 
     def _get_actions_in_radius(self, cell_idx: int) -> List[int]:
         """Collect the cells within the radius of the given cell."""
-        assert self.action_radius == 2, "Expected radius of 2"
         y, x = self.flatten_idx_to_yx[cell_idx]
-        yxs = [
-            (y + 1, x + 1),
-            (y + 1, x),
-            (y + 1, x - 1),
-            (y, x + 1),
-            (y, x),
-            (y, x - 1),
-            (y - 1, x + 1),
-            (y - 1, x),
-            (y - 1, x - 1),
-        ]
+
+        if self.action_diameter == 2:
+            # 2x2 where the given cell is the top-left entry
+            yxs = [
+                (y, x),
+                (y, x + 1),
+                (y + 1, x),
+                (y + 1, x + 1),
+            ]
+        elif self.action_diameter == 3:
+            # 3x3 with center at (y, x)
+            yxs = [
+                (y + 1, x + 1),
+                (y + 1, x),
+                (y + 1, x - 1),
+                (y, x + 1),
+                (y, x),
+                (y, x - 1),
+                (y - 1, x + 1),
+                (y - 1, x),
+                (y - 1, x - 1),
+            ]
+        else:
+            raise ValueError(
+                f"Unsupported action diameter {self.action_diameter}. Expected 2 or 3"
+            )
+
         actions = [
             self.yx_to_flatten_idx[yx] for yx in yxs if yx in self.yx_to_flatten_idx
         ]
@@ -227,7 +243,7 @@ class FireEnv(Env):
             return self.yx_to_flatten_idx[(y, x)]
         elif self.action_type == "flat":
             # No-op doesn't have a radius
-            if raw_action == -1 or self.action_radius == 1:
+            if raw_action == -1 or self.action_diameter == 1:
                 return raw_action
             else:
                 # Need to consider cells in radius

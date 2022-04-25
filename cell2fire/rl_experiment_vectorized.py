@@ -47,7 +47,7 @@ class Trainer:
             f"__architecture={args.architecture}"
             f"__action_space={args.action_space}"
             f"__seed={args.seed}"
-            f"__acr={args.action_radius}"
+            f"__acr={args.action_diameter}"
             f"__gamma={args.gamma}"
             f"__{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
@@ -105,7 +105,7 @@ class Trainer:
             single_env = lambda: FireEnv(
                 ignition_points=ig_points,
                 action_type=args.action_space,
-                action_radius=args.action_radius,
+                action_diameter=args.action_diameter,
                 fire_map=args.map,
                 output_dir=self.out_dir,
                 observation_type=self.observation_type,
@@ -115,7 +115,7 @@ class Trainer:
         elif args.ignition_type == "random":
             single_env = lambda: FireEnv(
                 action_type=args.action_space,
-                action_radius=args.action_radius,
+                action_diameter=args.action_diameter,
                 fire_map=args.map,
                 observation_type=self.observation_type,
                 output_dir=self.out_dir,
