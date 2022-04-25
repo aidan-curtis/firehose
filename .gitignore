@@ -29,6 +29,7 @@ results/
 .env/
 tmp/
 input/
+tmp*/
 
 cmake-build-debug/
 firehose-results/

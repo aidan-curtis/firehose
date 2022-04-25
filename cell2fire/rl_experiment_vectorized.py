@@ -41,9 +41,15 @@ class Trainer:
 
         # Unique ID for this training run, used by tensorboard
         self.unique_id = (
-            f"{args.algo}_{args.architecture}_{args.map}_{args.ignition_type}_"
-            f"{args.action_space}_seed={args.seed}_acr={args.action_radius}_"
-            f"gamma={args.gamma}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+            f"algo={args.algo}"
+            f"__ignition_type={args.ignition_type}"
+            f"__map={args.map}"
+            f"__architecture={args.architecture}"
+            f"__action_space={args.action_space}"
+            f"__seed={args.seed}"
+            f"__acr={args.action_radius}"
+            f"__gamma={args.gamma}"
+            f"__{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
         set_random_seed(args.seed)
 
