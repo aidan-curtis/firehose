@@ -78,11 +78,11 @@ def main(args):
             if args.ignition_type == "fixed"
             else None
         ),
-        action_radius=1,
+        action_radius=2,
         observation_type="forest_rgb",
         # verbose=True,
         **MAP_TO_EXTRA_KWARGS.get(
-            args.map, {"steps_before_sim": 10, "steps_per_action": 10}
+            args.map, {"steps_before_sim": 20, "steps_per_action": 3}
         ),
     )
 
@@ -94,10 +94,13 @@ def main(args):
 
     results = FirehoseResults.from_env(env, args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    action_mask = torch.ones((env.action_space.n,)).to(device)
+
+    enable_action_masking = False
 
     # Run policy until the end of the episode
     for _ in range(args.num_iters):
+        action_mask = torch.ones((env.action_space.n,)).to(device)
+
         obs = env.reset()
         if not args.disable_render:
             env.render()
@@ -108,19 +111,23 @@ def main(args):
             action, _states = model.predict(obs, deterministic=False)
 
             # Masked softmax to get probabilities and take mode - use logits so its more stable
-            processed_obs, vectorized = model.policy.obs_to_tensor(obs)
-            categorical_dist = model.policy.get_distribution(processed_obs)
-            action_dist = categorical_dist.distribution.probs.squeeze()
-            masked_action_dist = action_mask * action_dist
+            if enable_action_masking:
+                processed_obs, vectorized = model.policy.obs_to_tensor(obs)
+                categorical_dist = model.policy.get_distribution(processed_obs)
+                action_dist = categorical_dist.distribution.probs.squeeze()
+                masked_action_dist = action_mask * action_dist
 
-            # Renormalize the probabilities
-            # new_action_dist = masked_action_dist / masked_action_dist.sum()
-            # new_action_dist = softmax(masked_action_logits, dim=0)
-            new_action = masked_action_dist.argmax().item()
+                # Renormalize the probabilities
+                # new_action_dist = masked_action_dist / masked_action_dist.sum()
+                # new_action_dist = softmax(masked_action_logits, dim=0)
+                new_action = masked_action_dist.argmax().item()
 
-            print("===", new_action, "===")
-            obs, reward, done, info = env.step(new_action)
-            action_mask[new_action] = 0
+                print("===", new_action, "===")
+                obs, reward, done, info = env.step(new_action)
+                action_mask[new_action] = 0
+            else:
+                obs, reward, done, info = env.step(action)
+
 
             if not args.disable_render:
                 env.render()
@@ -152,20 +159,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "-al",
         "--algo",
-        default="a2c",
+        default="naive",
         help="Specifies the RL algorithm to use",
         choices=set(SUPPORTED_ALGOS),
     )
     parser.add_argument(
         "-m",
         "--map",
-        default="Sub20x20",
+        default="dogrib",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
         "-p",
         "--model_path",
-        default="a2c_final.zip",
+        default="cnn_a2c_final.zip",
         type=str,
         help="Specifies the path to the model to evaluate",
     )
