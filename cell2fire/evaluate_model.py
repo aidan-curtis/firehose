@@ -21,7 +21,13 @@ from firehose.video_recorder import FirehoseVideoRecorder
 MAP_TO_IGNITION_POINTS = {
     "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])
 }
-MAP_TO_EXTRA_KWARGS = {"Sub40x40": {"steps_before_sim": 50, "steps_per_action": 3}}
+MAP_TO_EXTRA_KWARGS = {
+    # I determined these by sweeping through these parameters
+    # and observing an average case of number of cells on fire
+    # by hand, such that we get a diverse range of environments.
+    "Sub20x20": {"steps_before_sim": 20, "steps_per_action": 8},
+    "Sub40x40": {"steps_before_sim": 25, "steps_per_action": 5},
+}
 
 # Algorithms we support
 SB3_ALGO_TO_MODEL_CLASS = {
@@ -64,7 +70,15 @@ def main(args):
     # Supercloud has TMPDIR so use that if it exists
     outdir = os.environ["TMPDIR"] if "TMPDIR" in os.environ.keys() else args.output_dir
 
-    # TODO: cleaner way of specifying max steps and ignition points
+    # Set steps before sim and steps per action
+    steps_before_sim = args.steps_before_sim
+    if steps_before_sim == -1:
+        steps_before_sim = MAP_TO_EXTRA_KWARGS[args.map]["steps_before_sim"]
+
+    steps_per_action = args.steps_per_action
+    if steps_per_action == -1:
+        steps_per_action = MAP_TO_EXTRA_KWARGS[args.map]["steps_per_action"]
+
     # TODO: support random ignition points
     env = FireEnv(
         action_type=args.action_space,
@@ -78,11 +92,8 @@ def main(args):
         ),
         action_diameter=args.action_diameter,
         # verbose=True,
-        steps_before_sim=args.steps_before_sim,
-        steps_per_action=args.steps_per_action,
-        # **MAP_TO_EXTRA_KWARGS.get(
-        #     args.map, {"steps_before_sim": 50, "steps_per_action": 10}
-        # ),
+        steps_before_sim=steps_before_sim,
+        steps_per_action=steps_per_action,
     )
 
     # Get the model for the algorithm and setup video recorder
@@ -158,10 +169,16 @@ if __name__ == "__main__":
         choices=FireEnv.ACTION_TYPES,
     )
     parser.add_argument(
-        "--steps_before_sim", type=int, default=30, help="Number of steps before sim starts"
+        "--steps_before_sim",
+        type=int,
+        default=-1,
+        help="Number of steps before sim starts. If not specified, we will use the default value for the map",
     ),
     parser.add_argument(
-        "--steps_per_action", type=int, default=10, help="Number of steps per action"
+        "--steps_per_action",
+        type=int,
+        default=-1,
+        help="Number of steps per action. If not specified, we will use the default value for the map",
     )
     parser.add_argument(
         "-acd", "--action_diameter", default=1, type=int, help="Action diameter"
@@ -196,4 +213,5 @@ if __name__ == "__main__":
     # Uncomment to print out lots of stuff
     # set_debug_mode(True)
 
-    main(args=parser.parse_args())
+    args_ = parser.parse_args()
+    main(args_)
