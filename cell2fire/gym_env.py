@@ -285,10 +285,16 @@ class FireEnv(Env):
 
         # IMPORTANT! Actions must be indexed from 0. The Cell2FireProcess class will
         # handle the indexing when calling Cell2Fire
-        self.fire_process.apply_actions(action)
-
-        # Progress fire process to next state
-        csv_files = self.fire_process.progress_to_next_state()
+        try:
+            self.fire_process.apply_actions(action)
+        except BrokenPipeError as e:
+            print("Could not write actions to cell2fire process. Weird stuff going on!")
+            print(e)
+            self.fire_process.write_lines_to_log()
+            csv_files = None
+        else:
+            # Progress fire process to next state
+            csv_files = self.fire_process.progress_to_next_state()
 
         if not csv_files:
             # Haven't encountered this state yet so lmk if you do
