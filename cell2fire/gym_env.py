@@ -35,7 +35,7 @@ class FireEnv(Env):
 
     def __init__(
         self,
-        fire_map: str = "mit_m",
+        fire_map: str = "Harvest40x40",
         action_type: str = "flat",
         observation_type: str = "forest",
         max_steps: int = 200,
@@ -78,6 +78,7 @@ class FireEnv(Env):
         # Image of forest which we overlay
         self.forest_image = self.helper.forest_image
         self.uforest_image = (self.forest_image * 255).astype("uint8")
+        self.reward_mask = self.helper.reward_data
         self.height, self.width = self.forest_image.shape[:2]
         self.num_cells = self.height * self.width
 
@@ -341,7 +342,7 @@ class FireEnv(Env):
             # raise NotImplementedError
 
             obs = self.get_observation()
-            reward = self.reward_func()
+            reward = self.reward_func(reward_mask=self.reward_mask)
             return obs, reward, True, {}
         else:
             # Use last CSV as that is most recent forest
@@ -355,7 +356,7 @@ class FireEnv(Env):
         self.state = df.values
         self._update_counters()
 
-        reward = self.reward_func()
+        reward = self.reward_func(reward_mask=self.reward_mask)
 
         # Check if we've exceeded max steps or Cell2Fire finished simulating
         done = self.iter >= self.max_steps or self.fire_process.finished

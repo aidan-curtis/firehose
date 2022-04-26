@@ -9,7 +9,7 @@ from functools import cached_property
 from typing import ClassVar, List, Optional
 
 import numpy as np
-
+from os.path import exists
 from cell2fire.utils.ReadDataPrometheus import Dictionary
 from firehose.utils import random_string
 
@@ -80,6 +80,10 @@ class ExperimentHelper:
         return "{}/../data/{}/Forest.asc".format(self.base_dir, self.map)
 
     @property
+    def reward_datafile(self) -> str:
+        return "{}/../data/{}/Reward.asc".format(self.base_dir, self.map)
+
+    @property
     def output_folder(self) -> str:
         return "{}/results/{}_{}_{}/".format(
             self.output_dir, self.map, self.datetime_str, self.random_seed
@@ -94,6 +98,13 @@ class ExperimentHelper:
     @cached_property
     def forest_data(self) -> np.ndarray:
         return np.loadtxt(self.forest_datafile, skiprows=6)
+
+    @cached_property
+    def reward_data(self) -> np.ndarray:
+        if(exists(self.reward_datafile)):
+            return np.loadtxt(self.reward_datafile, skiprows=6)
+        else:
+            return None
 
     @cached_property
     def fbp_lookup_dict(self) -> Dictionary:
