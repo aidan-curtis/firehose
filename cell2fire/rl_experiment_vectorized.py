@@ -8,6 +8,7 @@ from evaluate_model import (
     MAP_TO_IGNITION_POINTS,
     SB3_ALGO_TO_MODEL_CLASS,
 )
+from sb3_contrib import MaskablePPO
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
@@ -142,7 +143,7 @@ class Trainer:
             raise NotImplementedError("Resuming from checkpoint not implemented")
 
         # If no reload specified then just create a new model
-        if args.algo in {"ppo", "a2c", "trpo"}:
+        if args.algo in {"ppo", "a2c", "trpo", "ppo-maskable"}:
             model = SB3_ALGO_TO_MODEL_CLASS[args.algo](
                 args.architecture,
                 env,

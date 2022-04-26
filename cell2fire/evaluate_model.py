@@ -3,7 +3,8 @@ import json
 import os
 from typing import Optional
 
-from sb3_contrib import TRPO
+from sb3_contrib import TRPO, MaskablePPO
+from sb3_contrib.common.maskable.utils import get_action_masks
 from stable_baselines3 import A2C, DQN, PPO
 
 from cell2fire.gym_env import FireEnv
@@ -35,6 +36,7 @@ SB3_ALGO_TO_MODEL_CLASS = {
     "ppo": PPO,
     "trpo": TRPO,
     "dqn": DQN,
+    "ppo-maskable": MaskablePPO,
 }
 NO_MODEL_ALGO_TO_CLASS = {
     "random": RandomAlgorithm,
@@ -102,7 +104,26 @@ def main(args):
         env, algo=args.algo, disable_video=args.disable_video
     )
 
+    # Override observation type if required - this is for maskable PPO mostly
+    if "CnnPolicy" in type(model.policy).__name__:
+        env.observation_type = "forest_rgb"
+        env._set_observation_space()
+        print('Updated observation space to forest_rgb')
+
     results = FirehoseResults.from_env(env, args)
+
+    def get_action():
+        if args.algo == "ppo-maskable":
+            # Use masks if we're using maskable PPO
+            action_masks = get_action_masks(env)
+            action_, states_ = model.predict(
+                obs, deterministic=True, action_masks=action_masks
+            )
+        else:
+            action_, states_ = model.predict(obs, deterministic=True)
+
+        action_ = int(action_)
+        return action_
 
     # Run policy until the end of the episode
     for _ in range(args.num_iters):
@@ -113,7 +134,7 @@ def main(args):
         done = False
         reward = None
         while not done:
-            action, _states = model.predict(obs, deterministic=True)
+            action = get_action()
             obs, reward, done, info = env.step(action)
             if not args.disable_render:
                 env.render()
