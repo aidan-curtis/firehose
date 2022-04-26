@@ -8,6 +8,7 @@ from evaluate_model import (
     MAP_TO_IGNITION_POINTS,
     SB3_ALGO_TO_MODEL_CLASS,
 )
+from sb3_contrib import MaskablePPO
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
@@ -29,6 +30,10 @@ class Trainer:
         self.total_timesteps = args.train_steps
         self.checkpoint_save_freq = int(self.total_timesteps / 100)
 
+        # Steps before sim and per action
+        self.steps_before_sim = MAP_TO_EXTRA_KWARGS[args.map]["steps_before_sim"]
+        self.steps_per_action = MAP_TO_EXTRA_KWARGS[args.map]["steps_per_action"]
+
         # Determine observation type for the architecture and model kwargs
         if args.architecture == "CnnPolicy":
             self.model_kwargs = {"features_extractor_class": PaddedNatureCNN}
@@ -47,7 +52,7 @@ class Trainer:
             f"__architecture={args.architecture}"
             f"__action_space={args.action_space}"
             f"__seed={args.seed}"
-            f"__acr={args.action_radius}"
+            f"__acr={args.action_diameter}"
             f"__gamma={args.gamma}"
             f"__{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         )
@@ -105,20 +110,23 @@ class Trainer:
             single_env = lambda: FireEnv(
                 ignition_points=ig_points,
                 action_type=args.action_space,
-                action_radius=args.action_radius,
+                action_diameter=args.action_diameter,
                 fire_map=args.map,
                 output_dir=self.out_dir,
                 observation_type=self.observation_type,
-                **MAP_TO_EXTRA_KWARGS[args.map],
+                steps_before_sim=self.steps_before_sim,
+                steps_per_action=self.steps_per_action,
             )
             return single_env
         elif args.ignition_type == "random":
             single_env = lambda: FireEnv(
                 action_type=args.action_space,
-                action_radius=args.action_radius,
+                action_diameter=args.action_diameter,
                 fire_map=args.map,
                 observation_type=self.observation_type,
                 output_dir=self.out_dir,
+                steps_before_sim=self.steps_before_sim,
+                steps_per_action=self.steps_per_action,
             )
             return single_env
         else:
@@ -135,7 +143,7 @@ class Trainer:
             raise NotImplementedError("Resuming from checkpoint not implemented")
 
         # If no reload specified then just create a new model
-        if args.algo in {"ppo", "a2c", "trpo"}:
+        if args.algo in {"ppo", "a2c", "trpo", "ppo-maskable"}:
             model = SB3_ALGO_TO_MODEL_CLASS[args.algo](
                 args.architecture,
                 env,
@@ -205,7 +213,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m",
         "--map",
-        default="Sub40x40",
+        default="Sub20x20",
         help="Specifies the map to run the environment in",
     )
     parser.add_argument(
@@ -228,12 +236,16 @@ if __name__ == "__main__":
         help="Action space type",
         choices=FireEnv.ACTION_TYPES,
     )
-    parser.add_argument("-g", "--gamma", default=0.99, type=float, help="Agent gamma")
+    parser.add_argument("-g", "--gamma", default=0.9, type=float, help="Agent gamma")
     parser.add_argument(
-        "-acr", "--action_radius", default=1, type=int, help="Action radius"
+        "-acr", "--action_diameter", default=1, type=int, help="Action diameter"
     )
     parser.add_argument(
-        "-t", "--train_steps", default=5_000_000, type=int, help="Number of training steps",
+        "-t",
+        "--train_steps",
+        default=5_000_000,
+        type=int,
+        help="Number of training steps",
     )
     parser.add_argument("-s", "--seed", default=0, type=int, help="RL seed")
     parser.add_argument(

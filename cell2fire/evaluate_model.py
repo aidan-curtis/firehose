@@ -3,7 +3,8 @@ import json
 import os
 from typing import Optional
 
-from sb3_contrib import TRPO
+from sb3_contrib import TRPO, MaskablePPO
+from sb3_contrib.common.maskable.utils import get_action_masks
 from stable_baselines3 import A2C, DQN, PPO
 
 from cell2fire.gym_env import FireEnv
@@ -21,7 +22,13 @@ from firehose.video_recorder import FirehoseVideoRecorder
 MAP_TO_IGNITION_POINTS = {
     "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])
 }
-MAP_TO_EXTRA_KWARGS = {"Sub40x40": {"steps_before_sim": 50, "steps_per_action": 3}}
+MAP_TO_EXTRA_KWARGS = {
+    # I determined these by sweeping through these parameters
+    # and observing an average case of number of cells on fire
+    # by hand, such that we get a diverse range of environments.
+    "Sub20x20": {"steps_before_sim": 20, "steps_per_action": 8},
+    "Sub40x40": {"steps_before_sim": 25, "steps_per_action": 5},
+}
 
 # Algorithms we support
 SB3_ALGO_TO_MODEL_CLASS = {
@@ -29,6 +36,7 @@ SB3_ALGO_TO_MODEL_CLASS = {
     "ppo": PPO,
     "trpo": TRPO,
     "dqn": DQN,
+    "ppo-maskable": MaskablePPO,
 }
 NO_MODEL_ALGO_TO_CLASS = {
     "random": RandomAlgorithm,
@@ -64,7 +72,15 @@ def main(args):
     # Supercloud has TMPDIR so use that if it exists
     outdir = os.environ["TMPDIR"] if "TMPDIR" in os.environ.keys() else args.output_dir
 
-    # TODO: cleaner way of specifying max steps and ignition points
+    # Set steps before sim and steps per action
+    steps_before_sim = args.steps_before_sim
+    if steps_before_sim == -1:
+        steps_before_sim = MAP_TO_EXTRA_KWARGS[args.map]["steps_before_sim"]
+
+    steps_per_action = args.steps_per_action
+    if steps_per_action == -1:
+        steps_per_action = MAP_TO_EXTRA_KWARGS[args.map]["steps_per_action"]
+
     # TODO: support random ignition points
     env = FireEnv(
         action_type=args.action_space,
@@ -76,11 +92,10 @@ def main(args):
             if args.ignition_type == "fixed"
             else None
         ),
-        action_radius=1,
+        action_diameter=args.action_diameter,
         # verbose=True,
-        **MAP_TO_EXTRA_KWARGS.get(
-            args.map, {"steps_before_sim": 50, "steps_per_action": 10}
-        ),
+        steps_before_sim=steps_before_sim,
+        steps_per_action=steps_per_action,
     )
 
     # Get the model for the algorithm and setup video recorder
@@ -89,7 +104,26 @@ def main(args):
         env, algo=args.algo, disable_video=args.disable_video
     )
 
+    # Override observation type if required - this is for maskable PPO mostly
+    if "CnnPolicy" in type(model.policy).__name__:
+        env.observation_type = "forest_rgb"
+        env._set_observation_space()
+        print('Updated observation space to forest_rgb')
+
     results = FirehoseResults.from_env(env, args)
+
+    def get_action():
+        if args.algo == "ppo-maskable":
+            # Use masks if we're using maskable PPO
+            action_masks = get_action_masks(env)
+            action_, states_ = model.predict(
+                obs, deterministic=True, action_masks=action_masks
+            )
+        else:
+            action_, states_ = model.predict(obs, deterministic=True)
+
+        action_ = int(action_)
+        return action_
 
     # Run policy until the end of the episode
     for _ in range(args.num_iters):
@@ -100,7 +134,7 @@ def main(args):
         done = False
         reward = None
         while not done:
-            action, _states = model.predict(obs, deterministic=True)
+            action = get_action()
             obs, reward, done, info = env.step(action)
             if not args.disable_render:
                 env.render()
@@ -156,6 +190,21 @@ if __name__ == "__main__":
         choices=FireEnv.ACTION_TYPES,
     )
     parser.add_argument(
+        "--steps_before_sim",
+        type=int,
+        default=-1,
+        help="Number of steps before sim starts. If not specified, we will use the default value for the map",
+    ),
+    parser.add_argument(
+        "--steps_per_action",
+        type=int,
+        default=-1,
+        help="Number of steps per action. If not specified, we will use the default value for the map",
+    )
+    parser.add_argument(
+        "-acd", "--action_diameter", default=1, type=int, help="Action diameter"
+    )
+    parser.add_argument(
         "--disable-video", action="store_true", help="Disable video recording"
     )
     parser.add_argument(
@@ -185,4 +234,5 @@ if __name__ == "__main__":
     # Uncomment to print out lots of stuff
     # set_debug_mode(True)
 
-    main(args=parser.parse_args())
+    args_ = parser.parse_args()
+    main(args_)

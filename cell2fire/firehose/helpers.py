@@ -1,4 +1,5 @@
 import os
+import platform
 import random
 import shutil
 import string
@@ -190,6 +191,10 @@ class ExperimentHelper:
         # FIXME: check the radius actually works
         IgnitionPoints.RADIUS = radius
 
+        if platform.node() == "spitz":
+            # On willshen's desktop, random seed isn't fun
+            np.random.seed()
+
         ignition_points = np.random.choice(available_idxs, num_points, replace=False)
         ignition_points = IgnitionPoints(
             points=[
@@ -203,5 +208,5 @@ class ExperimentHelper:
                 for idx, point in enumerate(ignition_points)
             ]
         )
-        print("Sampled ignition points:", ignition_points)
+        # print("Sampled ignition points:", ignition_points)
         return ignition_points

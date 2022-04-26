@@ -11,4 +11,6 @@ deap
 gym
 stable-baselines3
 tensorboard
-sb3_contrib
+
+# Our version of sb3 contrib
+git+https://github.com/williamshen-nz/stable-baselines3-contrib

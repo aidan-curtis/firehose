@@ -9,7 +9,7 @@ i=1
 # They are supported in the evaluate_model.py script
 for algo in "a2c" "ppo"
 do
-	for map in "Sub20x20" "Harvest40x40" "Sub40x40"
+	for map in "Sub20x20" #"Harvest40x40" "Sub40x40"
 	do
 		for ignition_type in "random" # "fixed"
 		do
@@ -17,7 +17,7 @@ do
 			do
 				for architecture in "MlpPolicy" "CnnPolicy"
 				do
-					for gamma in "0.99" "0.90" "0.5" 
+					for gamma in "0.95" "0.90" #"0.5"
 					do
 						for seed in "1"
 						do
@@ -25,7 +25,7 @@ do
 								python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_diameter="$action_diameter" --seed=$seed --architecture="$architecture" --gamma="$gamma"
 							fi
 							i=$((i+1))
-					    done
+            done
 					done
 				done
 			done

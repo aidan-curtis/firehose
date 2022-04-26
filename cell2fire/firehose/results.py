@@ -32,7 +32,7 @@ class FirehoseResults:
 
     # Other parameters used for evaluation
     reward_function: str
-    action_radius: int
+    action_diameter: int
     steps_before_sim: int
     steps_per_action: int
 
@@ -68,7 +68,7 @@ class FirehoseResults:
             evaluation_args=args.__dict__,
             reward_function=env.reward_func.name(),
             # TODO: move the below into the evaluation args?
-            action_radius=env.action_radius,
+            action_diameter=env.action_diameter,
             steps_before_sim=env.steps_before_sim,
             steps_per_action=env.steps_per_action,
         )

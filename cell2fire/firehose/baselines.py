@@ -118,12 +118,18 @@ class NaiveAlgorithm(FlatActionSpaceAlgorithm):
         chosen_fire_idx = self.env.yx_to_flatten_idx[chosen_fire_yx]
 
         # Check if this cell has already been chosen
-        if chosen_fire_idx in self.prev_actions and chosen_fire_idx != -1:
+        chosen_action_is_ignition = chosen_fire_idx == self.ignition_point.idx - 1
+        action_is_no_op = chosen_fire_idx == -1
+        if (
+            chosen_fire_idx in self.prev_actions
+            and not action_is_no_op
+            and not chosen_action_is_ignition
+        ):
             print("Chosen:", chosen_fire_idx)
             print("Prev Actions:", self.prev_actions)
-            raise NotImplementedError(
-                "Unexpected case where a fire put out has recaught fire"
-            )
+            # This really shouldn't happen but if it happens just remove the exception
+            # raise RuntimeError("Unexpected case where a fire put out has recaught fire")
+            print("WARNING! Unexpected case where a fire put out has recaught fire")
 
         self.prev_actions.add(chosen_fire_idx)
         return chosen_fire_idx, None

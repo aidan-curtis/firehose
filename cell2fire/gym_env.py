@@ -45,7 +45,7 @@ class FireEnv(Env):
         num_ignition_points: int = 1,  # if ignition_points is specified this is ignored
         steps_before_sim: int = 0,
         steps_per_action: int = 1,
-        action_radius: int = 1,
+        action_diameter: int = 1,
         verbose: bool = False,
     ):
         """
@@ -61,7 +61,8 @@ class FireEnv(Env):
         :param steps_before_sim: number of steps to run before allowing any actions
         :param steps_per_action: number of steps to run after each action
             (is not run after pre-run steps)
-        :param action_radius: radius of action around its cell. Only 1,2 supported right now.
+        :param action_diameter: diameter of action around its cell. Only 1,2,3 supported right now.
+            Corresponds to 1x1, 2x2, 3x3 actions.
         :param verbose: verbose logging
         """
         # Current step idx
@@ -86,15 +87,18 @@ class FireEnv(Env):
             assert (
                 num_ignition_points == 1
             ), "Only 1 ignition point supported at the moment"
-            self._generate_ignition_fn = lambda: self.helper.generate_random_ignition_points(
+            self.ignition_points = self.helper.generate_random_ignition_points(
                 num_points=num_ignition_points,
             )
+            self.generate_ignition_points = True
+            self.num_ignition_points = num_ignition_points
         else:
             assert (
                 len(ignition_points) == 1
             ), "We don't know what happens with multiple ignition points"
-            self._generate_ignition_fn = lambda: ignition_points
-        self.ignition_points = self._generate_ignition_fn()
+            self.ignition_points = ignition_points
+            self.generate_ignition_points = False
+            self.num_ignition_points = len(ignition_points)
 
         # Set action and observation spaces.
         self.action_type = action_type
@@ -117,8 +121,8 @@ class FireEnv(Env):
 
         # Radius of action around cell. If 1 then just affects cell itself,
         # if 2, then it affects 3x3 area around cell, etc.
-        assert action_radius in {1, 2}, "Only 1 and 2 action radius supported"
-        self.action_radius = action_radius
+        assert action_diameter in {1, 2}, "Only 1 and 2 action radius supported"
+        self.action_diameter = action_diameter
 
         # Verbose logging in gym env and subprocess
         self.verbose = verbose
@@ -142,6 +146,9 @@ class FireEnv(Env):
         self.cells_burned: Set = set()  # cells burned or burning on fire)
         self.cells_on_fire: Set = set()  # cells currently on fire
 
+        # Previous actions for action masking
+        self.prev_actions: Set[int] = set()
+
         # Note: Cell2Fire Process. Call this at the end of __init__ once everything in
         #  env itself is setup!
         self.fire_process = Cell2FireProcess(env=self, verbose=verbose)
@@ -150,7 +157,8 @@ class FireEnv(Env):
         if self.action_type == "flat":
             # Flat discrete action space from (0 to number of pixels - 1)
             # We use 0-indexing here. This can be very high dimensional for large maps
-            self.action_space = Discrete(self.num_cells - 1)
+            # Discrete itself will use 0 to self.num_cells
+            self.action_space = Discrete(self.num_cells)
         elif self.action_type == "xy":
             # Continuous action space for x and y. We round at evaluation time
             # Note: underlying it is y,x so it fits better with np array
@@ -192,19 +200,34 @@ class FireEnv(Env):
 
     def _get_actions_in_radius(self, cell_idx: int) -> List[int]:
         """Collect the cells within the radius of the given cell."""
-        assert self.action_radius == 2, "Expected radius of 2"
         y, x = self.flatten_idx_to_yx[cell_idx]
-        yxs = [
-            (y + 1, x + 1),
-            (y + 1, x),
-            (y + 1, x - 1),
-            (y, x + 1),
-            (y, x),
-            (y, x - 1),
-            (y - 1, x + 1),
-            (y - 1, x),
-            (y - 1, x - 1),
-        ]
+
+        if self.action_diameter == 2:
+            # 2x2 where the given cell is the top-left entry
+            yxs = [
+                (y, x),
+                (y, x + 1),
+                (y + 1, x),
+                (y + 1, x + 1),
+            ]
+        elif self.action_diameter == 3:
+            # 3x3 with center at (y, x)
+            yxs = [
+                (y + 1, x + 1),
+                (y + 1, x),
+                (y + 1, x - 1),
+                (y, x + 1),
+                (y, x),
+                (y, x - 1),
+                (y - 1, x + 1),
+                (y - 1, x),
+                (y - 1, x - 1),
+            ]
+        else:
+            raise ValueError(
+                f"Unsupported action diameter {self.action_diameter}. Expected 2 or 3"
+            )
+
         actions = [
             self.yx_to_flatten_idx[yx] for yx in yxs if yx in self.yx_to_flatten_idx
         ]
@@ -227,13 +250,27 @@ class FireEnv(Env):
             return self.yx_to_flatten_idx[(y, x)]
         elif self.action_type == "flat":
             # No-op doesn't have a radius
-            if raw_action == -1 or self.action_radius == 1:
-                return raw_action
+            if raw_action == -1 or self.action_diameter == 1:
+                return int(raw_action)  # int is important as sometimes it is a np.int64
             else:
                 # Need to consider cells in radius
                 return self._get_actions_in_radius(raw_action)
         else:
             raise ValueError(f"Unsupported action type {self.action_type}")
+
+    def action_masks(self):
+        # https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html
+        if self.action_type != "flat":
+            raise ValueError("Only flat action type supported for action masks")
+
+        # List of boolean masks for each action
+        # True if an action hasn't been applied yet, False otherwise
+        mask = [True] * self.action_space.n
+        for action in self.prev_actions:
+            if action == -1:
+                continue
+            mask[action] = False
+        return mask
 
     def _update_counters(self):
         """ Update the counters based on the current state of the forest"""
@@ -269,10 +306,22 @@ class FireEnv(Env):
 
         # IMPORTANT! Actions must be indexed from 0. The Cell2FireProcess class will
         # handle the indexing when calling Cell2Fire
-        self.fire_process.apply_actions(action)
-
-        # Progress fire process to next state
-        csv_files = self.fire_process.progress_to_next_state()
+        try:
+            self.fire_process.apply_actions(action)
+            if isinstance(action, int):
+                self.prev_actions.add(action)
+            elif isinstance(action, list):
+                self.prev_actions.update(set(action))
+            else:
+                raise RuntimeError(f"Unknown action of type {type(action)}")
+        except BrokenPipeError as e:
+            print("Could not write actions to cell2fire process. Weird stuff going on!")
+            print(e)
+            self.fire_process.write_lines_to_log()
+            csv_files = None
+        else:
+            # Progress fire process to next state
+            csv_files = self.fire_process.progress_to_next_state()
 
         if not csv_files:
             # Haven't encountered this state yet so lmk if you do
@@ -376,7 +425,11 @@ class FireEnv(Env):
 
         # Reset ignition points - if random will set it to random
         old_ignition_points = self.ignition_points
-        self.ignition_points = self._generate_ignition_fn()
+
+        if self.generate_ignition_points:
+            self.ignition_points = self.helper.generate_random_ignition_points(
+                num_points=self.num_ignition_points,
+            )
 
         # Overwrite ignition points CSV as that is how we communicate to cell2fire
         if self.ignition_points != old_ignition_points:
@@ -386,6 +439,9 @@ class FireEnv(Env):
         self.cells_harvested = set()
         self.cells_burned = set()
         self.cells_on_fire = set()
+
+        # Reset prev actions
+        self.prev_actions = set()
 
         # Kill and respawn Cell2Fire process
         self.fire_process.reset()
