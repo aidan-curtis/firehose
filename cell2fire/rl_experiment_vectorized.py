@@ -236,7 +236,7 @@ if __name__ == "__main__":
         help="Action space type",
         choices=FireEnv.ACTION_TYPES,
     )
-    parser.add_argument("-g", "--gamma", default=0.99, type=float, help="Agent gamma")
+    parser.add_argument("-g", "--gamma", default=0.9, type=float, help="Agent gamma")
     parser.add_argument(
         "-acr", "--action_diameter", default=1, type=int, help="Action diameter"
     )

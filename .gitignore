@@ -43,3 +43,4 @@ evaluation_results/
 train_logs/
 train_args.json
 
+stable-baselines3-contrib
