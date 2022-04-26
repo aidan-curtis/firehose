@@ -20,7 +20,7 @@ from firehose.video_recorder import FirehoseVideoRecorder
 
 # Map name to ignition point and steps before simulation and steps per action
 MAP_TO_IGNITION_POINTS = {
-    "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])
+    "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])       
 }
 MAP_TO_EXTRA_KWARGS = {
     # I determined these by sweeping through these parameters
@@ -28,6 +28,12 @@ MAP_TO_EXTRA_KWARGS = {
     # by hand, such that we get a diverse range of environments.
     "Sub20x20": {"steps_before_sim": 20, "steps_per_action": 8},
     "Sub40x40": {"steps_before_sim": 25, "steps_per_action": 5},
+    "mit_m": {"steps_before_sim": 25, "steps_per_action": 5},
+    "mit_i": {"steps_before_sim": 25, "steps_per_action": 5},
+    "mit_t": {"steps_before_sim": 25, "steps_per_action": 5},
+    "dogrib_c1": {"steps_before_sim": 25, "steps_per_action": 5},
+    "dogrib_c2": {"steps_before_sim": 25, "steps_per_action": 5},
+    "dogrib_c3": {"steps_before_sim": 25, "steps_per_action": 5},
 }
 
 # Algorithms we support

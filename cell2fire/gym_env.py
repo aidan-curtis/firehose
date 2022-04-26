@@ -35,7 +35,7 @@ class FireEnv(Env):
 
     def __init__(
         self,
-        fire_map: str = "Harvest40x40",
+        fire_map: str = "mit_m",
         action_type: str = "flat",
         observation_type: str = "forest",
         max_steps: int = 200,
@@ -459,12 +459,12 @@ def main(debug: bool, delay_time: float = 0.0, **env_kwargs):
     num_steps = 0
     while not done:
         action = env.action_space.sample()
-        try:
-            state, reward, done, info = env.step(action)
-            num_steps += 1
-        except Exception as e:
-            env.fire_process.kill()
-            raise e
+        # try:
+        state, reward, done, info = env.step(action)
+        num_steps += 1
+        # except Exception as e:
+        #     env.fire_process.kill()
+        #     raise e
 
         env.render()
         if delay_time > 0.0:
