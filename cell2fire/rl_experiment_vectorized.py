@@ -28,7 +28,7 @@ class Trainer:
         """ Process args to setup trainer """
         self.args = args
         self.total_timesteps = args.train_steps
-        self.checkpoint_save_freq = int(self.total_timesteps / 100)
+        self.checkpoint_save_freq = int(self.total_timesteps / 300)
 
         # Steps before sim and per action
         self.steps_before_sim = MAP_TO_EXTRA_KWARGS[args.map]["steps_before_sim"]
@@ -140,7 +140,13 @@ class Trainer:
             if not os.path.exists(args.resume_from):
                 raise ValueError(f"Checkpoint {args.resume_from} does not exist")
             # TODO: figure out passing gamma, model kwargs, etc. in clean way
-            raise NotImplementedError("Resuming from checkpoint not implemented")
+            model = SB3_ALGO_TO_MODEL_CLASS[args.algo].load(args.resume_from)
+            model.set_env(env, force_reset=True)
+            old_tf_logdir = model.tensorboard_log
+            model.tensorboard_log = self.tf_logdir
+            print("Warning! Loading checkpoint from disk. Some args may not be used (e.g. gamma)")
+            print(f"Overrode tensorboard log dir from {old_tf_logdir} to {self.tf_logdir}")
+            return model
 
         # If no reload specified then just create a new model
         if args.algo in {"ppo", "a2c", "trpo", "ppo-maskable"}:

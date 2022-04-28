@@ -132,16 +132,18 @@ def main(args):
         return action_
 
     # Run policy until the end of the episode
-    for _ in range(args.num_iters):
+    for episode_idx in range(args.num_iters):
         obs = env.reset()
         if not args.disable_render:
             env.render()
 
         done = False
+        accum_reward = 0.0
         reward = None
         while not done:
             action = get_action()
             obs, reward, done, info = env.step(action)
+            accum_reward += reward
             if not args.disable_render:
                 env.render()
             video_recorder.capture_frame()
@@ -149,8 +151,10 @@ def main(args):
         if reward is None:
             raise RuntimeError("Reward is None. This should not happen")
 
+        # TODO: do we need discounting?
+        print(f"Episode {episode_idx + 1}/{args.num_iters}. Reward = {reward:.3f}")
         results.append(
-            reward=reward,
+            reward=accum_reward,
             cells_harvested=len(env.cells_harvested),
             cells_on_fire=len(env.cells_on_fire),
             cells_burned=len(env.cells_burned),
