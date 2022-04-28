@@ -31,14 +31,14 @@ class FireSizeReward(Reward):
     def name(cls) -> str:
         return "FireSizeReward"
 
-    def __call__(self, scale: float = 10, reward_mask = None) -> float:
+    def __call__(self, scale: float = 10, reward_mask=None) -> float:
         """-(num cells on fire) / (total num cells in forest) * scale"""
         assert self.env.state.shape == self.env.forest_image.shape[:2]
-        print(reward_mask)
-        if(reward_mask is None):
+        # print(reward_mask)
+        if reward_mask is None:
             fire_idxs = np.where(self.env.state > 0)
         else:
-            fire_idxs = np.where(self.env.state*reward_mask > 0) 
+            fire_idxs = np.where(self.env.state * reward_mask > 0)
 
-        print( -len(fire_idxs[0]) / self.env.num_cells * scale)
+        # print(-len(fire_idxs[0]) / self.env.num_cells * scale)
         return -len(fire_idxs[0]) / self.env.num_cells * scale

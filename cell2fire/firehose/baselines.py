@@ -13,6 +13,7 @@ class Algorithm(ABC):
 
     def __init__(self, env: FireEnv):
         self.env = env
+        self.policy = None
 
     def learn(self, **kwargs):
         print("Nothing to learn")
