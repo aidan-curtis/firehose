@@ -1,4 +1,5 @@
 import os
+import shutil
 import time
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -327,8 +328,8 @@ class FireEnv(Env):
         if not csv_files:
             # Haven't encountered this state yet so lmk if you do
             if self.fire_process.finished:
-                raise RuntimeError(
-                    f"Fire process finished but no csv files. You broke the code!"
+                print(
+                    "WARNING! Fire process finished but no csv files. You broke the code!"
                 )
 
             # No state and Cell2Fire didn't finish, so something went wrong
@@ -443,6 +444,11 @@ class FireEnv(Env):
 
         # Reset prev actions
         self.prev_actions = set()
+
+        # Delete all files in the output directory so we don't run out of inodes
+        # Don't do checks as we don't want to kill training just because this failed
+        shutil.rmtree(self.helper.output_folder, ignore_errors=True)
+        os.makedirs(self.helper.output_folder, exist_ok=True)
 
         # Kill and respawn Cell2Fire process
         self.fire_process.reset()
