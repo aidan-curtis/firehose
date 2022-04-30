@@ -20,6 +20,9 @@ from firehose.config import set_training_enabled
 from firehose.models import PaddedNatureCNN
 from firehose.utils import TrainerEncoder
 
+
+Model = object
+
 set_training_enabled(True)
 
 
@@ -132,11 +135,11 @@ class Trainer:
         else:
             raise NotImplementedError
 
-    def _get_model(self, env):
+    def _get_model(self, env) -> Model:
         args = self.args
 
-        # Check if we need to reload from checkpoint
         if args.resume_from:
+            # Check if we need to reload from checkpoint
             if not os.path.exists(args.resume_from):
                 raise ValueError(f"Checkpoint {args.resume_from} does not exist")
             # TODO: figure out passing gamma, model kwargs, etc. in clean way
@@ -144,13 +147,16 @@ class Trainer:
             model.set_env(env, force_reset=True)
             old_tf_logdir = model.tensorboard_log
             model.tensorboard_log = self.tf_logdir
-            print("Warning! Loading checkpoint from disk. Some args may not be used (e.g. gamma)")
-            print(f"Overrode tensorboard log dir from {old_tf_logdir} to {self.tf_logdir}")
-            return model
-
-        # If no reload specified then just create a new model
-        if args.algo in {"ppo", "a2c", "trpo", "ppo-maskable"}:
-            model = SB3_ALGO_TO_MODEL_CLASS[args.algo](
+            print(
+                "Warning! Loading checkpoint from disk. Some args may not be used (e.g. gamma)"
+            )
+            print(
+                f"Overrode tensorboard log dir from {old_tf_logdir} to {self.tf_logdir}"
+            )
+        elif args.algo in {"ppo", "a2c", "trpo", "ppo-maskable"}:
+            # If no reload specified then just create a new model
+            model_cls = SB3_ALGO_TO_MODEL_CLASS[args.algo]
+            model = model_cls(
                 args.architecture,
                 env,
                 verbose=1,
@@ -167,6 +173,12 @@ class Trainer:
             return model
         else:
             raise NotImplementedError
+
+        # Workaround for logits having invalid values for masked PPO
+        if args.algo == "ppo-maskable":
+            model.set_env(env, force_reset=True)
+
+        return model
 
     def evaluate(self):
         # FIXME: should we bother? Can just use evaluate_model.py script
