@@ -43,4 +43,7 @@ evaluation_results/
 train_logs/
 train_args.json
 
+# Randomly generated ignition points
+*-ignition-points.json
+
 stable-baselines3-contrib

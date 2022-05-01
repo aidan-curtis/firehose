@@ -5,6 +5,8 @@ import random
 import string
 import time
 
+import numpy as np
+
 
 class TrainerEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -14,6 +16,17 @@ class TrainerEncoder(json.JSONEncoder):
             return str(obj)
         return super().default(obj)
 
+
+class NumpyEncoder(json.JSONEncoder):
+    # https://stackoverflow.com/a/57915246
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NumpyEncoder, self).default(obj)
 
 def wait_until_file_populated(
     f_path: str, timeout: int = 10, min_size: int = 100, wait_time: float = 0.01

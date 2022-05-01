@@ -7,22 +7,11 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 import numpy as np
 
 from firehose.helpers import IgnitionPoint, IgnitionPoints
+from firehose.utils import NumpyEncoder
 
 if TYPE_CHECKING:
     # Can't be bothered fixing any circular imports we might get so put this here
     from gym_env import FireEnv
-
-
-class _NumpyEncoder(json.JSONEncoder):
-    # https://stackoverflow.com/a/57915246
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        if isinstance(obj, np.floating):
-            return float(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super(_NumpyEncoder, self).default(obj)
 
 
 @dataclass
@@ -111,7 +100,7 @@ class FirehoseResults:
 
     def to_json(self) -> str:
         json_dict = asdict(self)
-        json_str = json.dumps(json_dict, cls=_NumpyEncoder, indent=2)
+        json_str = json.dumps(json_dict, cls=NumpyEncoder, indent=2)
         return json_str
 
     def write_json(

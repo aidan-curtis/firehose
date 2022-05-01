@@ -3,6 +3,7 @@ import json
 import os
 from typing import Optional
 
+from generate_ignition_points import load_ignition_points
 from sb3_contrib import TRPO, MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks
 from stable_baselines3 import A2C, DQN, PPO
@@ -20,7 +21,7 @@ from firehose.video_recorder import FirehoseVideoRecorder
 
 # Map name to ignition point and steps before simulation and steps per action
 MAP_TO_IGNITION_POINTS = {
-    "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])       
+    "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])
 }
 MAP_TO_EXTRA_KWARGS = {
     # I determined these by sweeping through these parameters
@@ -73,6 +74,18 @@ def main(args):
     if args.disable_render:
         assert args.disable_video, "Must disable video if rendering is disabled"
 
+    # Extract ignition points
+    if not args.ignition_type.endswith(".json"):
+        assert args.ignition_type in {"random", "fixed"}
+        ignition_points = None
+    else:
+        assert args.ignition_type.startswith(
+            args.map
+        ), "Map must match ignition point JSON"
+        ignition_points = load_ignition_points(args.ignition_type)
+        args.num_iters = len(ignition_points)
+        print(f"WARNING! Overriding number of iterations to {args.num_iters}")
+
     # TODO: support these other args
 
     # Supercloud has TMPDIR so use that if it exists
@@ -114,7 +127,7 @@ def main(args):
     if "CnnPolicy" in type(model.policy).__name__:
         env.observation_type = "forest_rgb"
         env._set_observation_space()
-        print('Updated observation space to forest_rgb')
+        print("Updated observation space to forest_rgb")
 
     results = FirehoseResults.from_env(env, args)
 
@@ -136,6 +149,12 @@ def main(args):
         obs = env.reset()
         if not args.disable_render:
             env.render()
+
+        # Our custom ignition points
+        if ignition_points is not None:
+            points = ignition_points[episode_idx]
+            env.ignition_points = points
+            print(f"For episode {episode_idx}, using ignition points:", points)
 
         done = False
         accum_reward = 0.0
@@ -224,8 +243,8 @@ if __name__ == "__main__":
         "-i",
         "--ignition_type",
         default="random",
-        help="Specifies whether to use a random or fixed fire ignition point",
-        choices={"fixed", "random"},
+        help="Specifies whether to use a random or fixed fire ignition point."
+        "Choices: fixed, random, or specify path to a ignition point JSON file",
     )
     parser.add_argument(
         "-o",
