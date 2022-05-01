@@ -1249,7 +1249,9 @@ void Cell2Fire::Step(std::default_random_engine generator, int rnumber, double r
 		this->done = true;
 
 		// Print-out results to folder
-		if (this->args.verbose) this->Results();
+		// if (this->args.verbose)
+		// Force printing results to help debugging
+		this->Results();
 
 		//Next Sim
 		this->sim += 1;
@@ -1551,11 +1553,12 @@ int main(int argc, char * argv[]){
                         break;
                     }
 
+                    // Comment this out as the step code should be checking the done flag
                     // Max number of steps exceeded
-                    if (tstep > Forest.args.MaxFirePeriods * Forest.args.TotalYears) {
-                        stop = 1;
-                        break;
-                    }
+                    // if (!(tstep <= Forest.args.MaxFirePeriods * Forest.args.TotalYears - 1)) {
+                    //     stop = 1;
+                    //     break;
+                    // }
                 }
 
 			}

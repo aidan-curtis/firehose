@@ -163,4 +163,5 @@ class Cell2FireProcess:
         self.finished = False
         self.kill()
         self.spawn()
+        self.lines = []
         self.progress_to_next_state()

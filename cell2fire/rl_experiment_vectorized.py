@@ -189,9 +189,13 @@ class Trainer:
 
         # Need to use use SubprocVecEnv so its parallelized. DummyVecEnv is sequential on a single core
         single_env = self._get_env()
-        env = make_vec_env(
-            single_env, n_envs=args.num_processes, vec_env_cls=SubprocVecEnv
-        )
+        if args.num_processes == 1:
+            # Mainly for debugging purposes
+            env = single_env()
+        else:
+            env = make_vec_env(
+                single_env, n_envs=args.num_processes, vec_env_cls=SubprocVecEnv
+            )
 
         # Get the model and setup checkpointing
         model = self._get_model(env)
