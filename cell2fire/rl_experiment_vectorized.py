@@ -144,7 +144,6 @@ class Trainer:
                 raise ValueError(f"Checkpoint {args.resume_from} does not exist")
             # TODO: figure out passing gamma, model kwargs, etc. in clean way
             model = SB3_ALGO_TO_MODEL_CLASS[args.algo].load(args.resume_from)
-            model.set_env(env, force_reset=True)
             old_tf_logdir = model.tensorboard_log
             model.tensorboard_log = self.tf_logdir
             print(
@@ -164,13 +163,11 @@ class Trainer:
                 gamma=args.gamma,
                 policy_kwargs=self.model_kwargs,
             )
-            return model
         elif args.algo == "dqn":
             # DQN doesn't support gamma so handle separately
             model = DQN(
                 args.architecture, env, verbose=1, tensorboard_log=self.tf_logdir
             )
-            return model
         else:
             raise NotImplementedError
 
