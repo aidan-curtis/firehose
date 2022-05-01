@@ -8,10 +8,10 @@ from evaluate_model import (
     MAP_TO_IGNITION_POINTS,
     SB3_ALGO_TO_MODEL_CLASS,
 )
-from sb3_contrib import MaskablePPO
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
@@ -20,7 +20,6 @@ from firehose.config import set_training_enabled
 from firehose.models import PaddedNatureCNN
 from firehose.utils import TrainerEncoder
 
-
 Model = object
 
 set_training_enabled(True)
@@ -28,7 +27,7 @@ set_training_enabled(True)
 
 class Trainer:
     def __init__(self, args):
-        """ Process args to setup trainer """
+        """Process args to setup trainer"""
         self.args = args
         self.total_timesteps = args.train_steps
         self.checkpoint_save_freq = int(self.total_timesteps / 300)
@@ -91,7 +90,7 @@ class Trainer:
         self._dump_to_json()
 
     def _dump_to_json(self):
-        """ Dump self to JSON"""
+        """Dump self to JSON"""
         if os.path.exists(self.train_log_dir):
             raise RuntimeError(
                 f"Train log directory {self.train_log_dir} already exists"
@@ -106,7 +105,7 @@ class Trainer:
         print("Wrote train params to", log_fname)
 
     def _get_env(self):
-        """ Get the environment based on the ignition type """
+        """Get the environment based on the ignition type"""
         args = self.args
         if args.ignition_type == "fixed":
             ig_points = MAP_TO_IGNITION_POINTS[args.map]
@@ -188,10 +187,13 @@ class Trainer:
         single_env = self._get_env()
         if args.num_processes == 1:
             # Mainly for debugging purposes
-            env = single_env()
+            env = Monitor(single_env(), self.train_log_dir)
         else:
             env = make_vec_env(
-                single_env, n_envs=args.num_processes, vec_env_cls=SubprocVecEnv
+                single_env,
+                n_envs=args.num_processes,
+                vec_env_cls=SubprocVecEnv,
+                monitor_dir=self.train_log_dir,  # log to disk
             )
 
         # Get the model and setup checkpointing
