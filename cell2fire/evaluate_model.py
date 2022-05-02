@@ -235,12 +235,6 @@ if __name__ == "__main__":
         "-acd", "--action_diameter", default=1, type=int, help="Action diameter"
     )
     parser.add_argument(
-        "--disable-video", action="store_true", help="Disable video recording"
-    )
-    parser.add_argument(
-        "-d", "--disable-render", action="store_true", help="Disable cv2 rendering"
-    )
-    parser.add_argument(
         "-i",
         "--ignition_type",
         default="random",
