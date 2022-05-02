@@ -154,7 +154,7 @@ class Trainer:
             print(
                 f"Overrode tensorboard log dir from {old_tf_logdir} to {self.tf_logdir}"
             )
-        elif args.algo in {"ppo", "a2c", "trpo", "ppo-maskable"}:
+        elif args.algo in {"ppo", "a2c", "trpo", "ppo-maskable", "dqn"}:
             # If no reload specified then just create a new model
             model_cls = SB3_ALGO_TO_MODEL_CLASS[args.algo]
             model = model_cls(
@@ -164,11 +164,6 @@ class Trainer:
                 tensorboard_log=self.tf_logdir,
                 gamma=args.gamma,
                 policy_kwargs=self.model_kwargs,
-            )
-        elif args.algo == "dqn":
-            # DQN doesn't support gamma so handle separately
-            model = DQN(
-                args.architecture, env, verbose=1, tensorboard_log=self.tf_logdir
             )
         else:
             raise NotImplementedError
