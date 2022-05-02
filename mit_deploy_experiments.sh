@@ -9,7 +9,7 @@ i=1
 # They are supported in the evaluate_model.py script
 for algo in "ppo-maskable"
 do
-        for map in "Sub20x20" # "mit_m" "mit_i" "mit_t"
+        for map in "mit_m" "mit_i" "mit_t"
         do
                 for ignition_type in "random" # "fixed"
                 do
