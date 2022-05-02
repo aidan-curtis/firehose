@@ -6,10 +6,10 @@ import os
 from_folder = "./data/dogrib"
 
 # Set the start x/y coordinates and size
-to_folder = "./data/dogrib_c1"
-start_xy = (0,0)
-sizes = (100, 100)
-use_const = None
+# to_folder = "./data/dogrib_c1"
+# start_xy = (0,0)
+# sizes = (100, 100)
+# use_const = None
 
 # to_folder = "./data/dogrib_c2"
 # start_xy = (100, 0)
@@ -23,18 +23,18 @@ use_const = None
 
 # to_folder = "./data/mit_m"
 # start_xy = (0, 0)
-# sizes = (100, 100)
+# sizes = (20, 20)
 # use_const = 2
 
 # to_folder = "./data/mit_i"
 # start_xy = (0, 0)
-# sizes = (100, 100)
+# sizes = (20, 20)
 # use_const = 2
 
-to_folder = "./data/mit_t"
-start_xy = (0, 0)
-sizes = (100, 100)
-use_const = 2
+# to_folder = "./data/mit_t"
+# start_xy = (0, 0)
+# sizes = (20, 20)
+# use_const = 2
 
 grid_names = ["cur.asc", "elevation.asc", "Forest.asc", "saz.asc", "slope.asc"]
 

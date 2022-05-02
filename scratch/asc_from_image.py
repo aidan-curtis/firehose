@@ -21,11 +21,12 @@ output_f.write("cellsize 100\n") # from dogrib
 output_f.write("NODATA_value -9999\n") # from dogrib
 
 def from_color(color):
+	print(color)
 	return str(int(color<200))
 		
 # Write data
 for x in range(image.shape[0]):
 	# Test blue pixels
-	output_f.write(" ".join([from_color(k) for k in list(image[x, :, 2])])+"\n")
+	output_f.write(" ".join([from_color(k) for k in list(image[x, :, 1])])+"\n")
 
 output_f.close()
