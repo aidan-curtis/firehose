@@ -18,6 +18,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from cell2fire.gym_env import FireEnv
 from firehose.config import set_training_enabled
 from firehose.models import PaddedNatureCNN
+from firehose.rewards import FireSizeReward, REWARD_FUNCTIONS
 from firehose.utils import TrainerEncoder
 
 Model = object
@@ -118,6 +119,7 @@ class Trainer:
                 observation_type=self.observation_type,
                 steps_before_sim=self.steps_before_sim,
                 steps_per_action=self.steps_per_action,
+                reward_func_cls=REWARD_FUNCTIONS[args.reward],
             )
             return single_env
         elif args.ignition_type == "random":
@@ -129,6 +131,7 @@ class Trainer:
                 output_dir=self.out_dir,
                 steps_before_sim=self.steps_before_sim,
                 steps_per_action=self.steps_per_action,
+                reward_func_cls=REWARD_FUNCTIONS[args.reward],
             )
             return single_env
         else:
@@ -224,6 +227,7 @@ def train(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.formatter_class = argparse.ArgumentDefaultsHelpFormatter
     parser.add_argument(
         "-al",
         "--algo",
@@ -256,6 +260,13 @@ if __name__ == "__main__":
         default="flat",
         help="Action space type",
         choices=FireEnv.ACTION_TYPES,
+    )
+    parser.add_argument(
+        "-r",
+        "--reward",
+        default=FireSizeReward.name(),
+        help="Specifies the reward function to use",
+        choices=set(REWARD_FUNCTIONS.keys()),
     )
     parser.add_argument("-g", "--gamma", default=0.9, type=float, help="Agent gamma")
     parser.add_argument(

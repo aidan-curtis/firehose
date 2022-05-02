@@ -138,6 +138,8 @@ class FireEnv(Env):
         self.yx_to_flatten_idx: Dict[Tuple[int, int], int] = {
             yx: idx for idx, yx, in self.flatten_idx_to_yx.items()
         }
+        min_yx, max_yx = np.array(min(self.yx_to_flatten_idx)), np.array(max(self.yx_to_flatten_idx))
+        self.max_dist = np.linalg.norm(max_yx - min_yx)
 
         # Note: Reward function. Call this at end of __init__ just so we're safe
         #  Reward function uses the env state, etc. to compute rewards.
@@ -343,7 +345,7 @@ class FireEnv(Env):
             # raise NotImplementedError
 
             obs = self.get_observation()
-            reward = self.reward_func(reward_mask=self.reward_mask)
+            reward = self.reward_func(reward_mask=self.reward_mask, action=action)
             return obs, reward, True, {}
         else:
             # Use last CSV as that is most recent forest
@@ -357,7 +359,7 @@ class FireEnv(Env):
         self.state = df.values
         self._update_counters()
 
-        reward = self.reward_func(reward_mask=self.reward_mask)
+        reward = self.reward_func(reward_mask=self.reward_mask, action=action)
 
         # Check if we've exceeded max steps or Cell2Fire finished simulating
         done = self.iter >= self.max_steps or self.fire_process.finished
