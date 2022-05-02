@@ -18,6 +18,7 @@ from firehose.baselines import (
 from firehose.helpers import IgnitionPoint, IgnitionPoints
 from firehose.results import FirehoseResults
 from firehose.video_recorder import FirehoseVideoRecorder
+import numpy as np
 
 # Map name to ignition point and steps before simulation and steps per action
 MAP_TO_IGNITION_POINTS = {
@@ -35,6 +36,7 @@ MAP_TO_EXTRA_KWARGS = {
     "dogrib_c1": {"steps_before_sim": 25, "steps_per_action": 5},
     "dogrib_c2": {"steps_before_sim": 25, "steps_per_action": 5},
     "dogrib_c3": {"steps_before_sim": 25, "steps_per_action": 5},
+    "dogrib": {"steps_before_sim": 25, "steps_per_action": 5},
 }
 
 # Algorithms we support
@@ -145,8 +147,12 @@ def main(args):
         return action_
 
     # Run policy until the end of the episode
+    all_parallel_images = [ ]
     for episode_idx in range(args.num_iters):
+        parallel_images = []
         obs = env.reset()
+        if(args.parallel_record):
+            parallel_images.append(env.render(mode="rgb_array"))
         if not args.disable_render:
             env.render()
 
@@ -163,6 +169,8 @@ def main(args):
             action = get_action()
             obs, reward, done, info = env.step(action)
             accum_reward += reward
+            if(args.parallel_record):
+                parallel_images.append(env.render(mode="rgb_array"))
             if not args.disable_render:
                 env.render()
             video_recorder.capture_frame()
@@ -180,6 +188,11 @@ def main(args):
             sim_steps=env.iter,
             ignition_points=env.ignition_points,
         )
+        print(np.expand_dims(np.concatenate(parallel_images), axis=0).shape)
+        all_parallel_images.append(np.expand_dims(np.concatenate(parallel_images), axis=0))
+
+    print(all_parallel_images)
+    print(np.concatenate(all_parallel_images, axis=0).shape)
 
     env.close()
     video_recorder.close()
@@ -240,6 +253,9 @@ if __name__ == "__main__":
         "-d", "--disable-render", action="store_true", help="Disable cv2 rendering"
     )
     parser.add_argument(
+        "-pr", "--parallel-record", action="store_true", help="Disable cv2 rendering"
+    )
+    parser.add_argument(
         "-i",
         "--ignition_type",
         default="random",
@@ -256,7 +272,7 @@ if __name__ == "__main__":
         "-n",
         "--num-iters",
         type=int,
-        default=10,
+        default=20,
         help="Number of iterations to evaluate",
     )
     print("Args:", json.dumps(vars(parser.parse_args()), indent=2))
