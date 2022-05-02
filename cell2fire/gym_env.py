@@ -79,7 +79,12 @@ class FireEnv(Env):
         # Image of forest which we overlay
         self.forest_image = self.helper.forest_image
         self.uforest_image = (self.forest_image * 255).astype("uint8")
-        self.reward_mask = self.helper.reward_data
+        
+        if(self.helper.reward_data is None):
+            self.reward_mask = None
+        else:
+            self.reward_mask = np.where(self.helper.reward_data > 0)
+
         self.height, self.width = self.forest_image.shape[:2]
         self.num_cells = self.height * self.width
 

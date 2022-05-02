@@ -38,7 +38,7 @@ class FireSizeReward(Reward):
         if reward_mask is None:
             fire_idxs = np.where(self.env.state > 0)
         else:
-            fire_idxs = np.where(self.env.state * reward_mask > 0)
+            fire_idxs = np.where(self.env.state[reward_mask] > 0)
 
         # print(-len(fire_idxs[0]) / self.env.num_cells * scale)
         return -len(fire_idxs[0]) / self.env.num_cells * scale

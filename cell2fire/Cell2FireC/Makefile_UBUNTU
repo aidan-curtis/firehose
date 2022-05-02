@@ -1,4 +1,4 @@
-EIGENDIR = /usr/include/eigen3/
+EIGENDIR = /home/gridsan/acurtis/eigen/include/eigen3/
 CC = g++
 MPCC = g++
 OPENMP = -openmp
