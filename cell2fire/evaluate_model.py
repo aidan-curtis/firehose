@@ -191,8 +191,8 @@ def main(args):
         print(np.expand_dims(np.concatenate(parallel_images), axis=0).shape)
         all_parallel_images.append(np.expand_dims(np.concatenate(parallel_images), axis=0))
 
-    print(all_parallel_images)
-    print(np.concatenate(all_parallel_images, axis=0).shape)
+    # print(all_parallel_images)
+    # print(np.concatenate(all_parallel_images, axis=0).shape)
 
     env.close()
     video_recorder.close()
