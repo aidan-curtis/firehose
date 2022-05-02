@@ -17,6 +17,7 @@ from firehose.baselines import (
 )
 from firehose.helpers import IgnitionPoint, IgnitionPoints
 from firehose.results import FirehoseResults
+from firehose.rewards import REWARD_FUNCTIONS
 from firehose.video_recorder import FirehoseVideoRecorder
 
 # Map name to ignition point and steps before simulation and steps per action
@@ -245,6 +246,19 @@ if __name__ == "__main__":
         default="random",
         help="Specifies whether to use a random or fixed fire ignition point."
         "Choices: fixed, random, or specify path to a ignition point JSON file",
+    )
+    parser.add_argument(
+        "-r",
+        "--reward",
+        default="WillShenReward",
+        help="Specifies the reward function to use",
+        choices=set(REWARD_FUNCTIONS.keys()),
+    )
+    parser.add_argument(
+        "--disable-video", action="store_true", help="Disable video recording"
+    )
+    parser.add_argument(
+        "-d", "--disable-render", action="store_true", help="Disable cv2 rendering"
     )
     parser.add_argument(
         "-o",

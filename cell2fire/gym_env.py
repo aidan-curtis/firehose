@@ -79,8 +79,8 @@ class FireEnv(Env):
         # Image of forest which we overlay
         self.forest_image = self.helper.forest_image
         self.uforest_image = (self.forest_image * 255).astype("uint8")
-        
-        if(self.helper.reward_data is None):
+
+        if self.helper.reward_data is None:
             self.reward_mask = None
         else:
             self.reward_mask = np.where(self.helper.reward_data > 0)
@@ -143,7 +143,9 @@ class FireEnv(Env):
         self.yx_to_flatten_idx: Dict[Tuple[int, int], int] = {
             yx: idx for idx, yx, in self.flatten_idx_to_yx.items()
         }
-        min_yx, max_yx = np.array(min(self.yx_to_flatten_idx)), np.array(max(self.yx_to_flatten_idx))
+        min_yx, max_yx = np.array(min(self.yx_to_flatten_idx)), np.array(
+            max(self.yx_to_flatten_idx)
+        )
         self.max_dist = np.linalg.norm(max_yx - min_yx)
 
         # Note: Reward function. Call this at end of __init__ just so we're safe
@@ -182,7 +184,10 @@ class FireEnv(Env):
             # Forest as a RGB image
             # TODO: should we normalize the RGB image? At least divide by 255 so its [0, 1]
             self.observation_space = spaces.Box(
-                low=0, high=255, shape=(self.height, self.width, 3), dtype=np.uint8,
+                low=0,
+                high=255,
+                shape=(self.height, self.width, 3),
+                dtype=np.uint8,
             )
         elif self.observation_type == "forest":
             # Forest as -1 (harvested), 0 (nothing), 1 (on fire)
@@ -192,7 +197,10 @@ class FireEnv(Env):
         elif self.observation_space == "time":
             # Blind model
             self.observation_space = spaces.Box(
-                low=0, high=self.max_steps + 1, shape=(1,), dtype=np.uint8,
+                low=0,
+                high=self.max_steps + 1,
+                shape=(1,),
+                dtype=np.uint8,
             )
         else:
             raise ValueError(f"Unsupported observation type {self.observation_type}")
@@ -282,7 +290,7 @@ class FireEnv(Env):
         return mask
 
     def _update_counters(self):
-        """ Update the counters based on the current state of the forest"""
+        """Update the counters based on the current state of the forest"""
         harvested = set(zip(*np.where(self.state == -1)))
         on_fire = set(zip(*np.where(self.state == 1)))
 
@@ -461,6 +469,11 @@ class FireEnv(Env):
         self.fire_process.reset()
 
         return self.get_observation()
+
+    def close(self):
+        """Clean up after ourselves"""
+        self.helper.teardown()
+        super().close()
 
 
 def main(debug: bool, delay_time: float = 0.0, **env_kwargs):
