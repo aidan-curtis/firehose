@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import time
 from typing import Optional
 
 from generate_ignition_points import load_ignition_points
@@ -10,6 +11,7 @@ from stable_baselines3 import A2C, DQN, PPO
 
 from cell2fire.gym_env import FireEnv
 from firehose.baselines import (
+    HumanExpertAlgorithm,
     HumanInputAlgorithm,
     NaiveAlgorithm,
     NoAlgorithm,
@@ -50,6 +52,7 @@ NO_MODEL_ALGO_TO_CLASS = {
     "random": RandomAlgorithm,
     "naive": NaiveAlgorithm,
     "human": HumanInputAlgorithm,
+    "expert": HumanExpertAlgorithm,
     "none": NoAlgorithm,
 }
 
@@ -167,6 +170,8 @@ def main(args):
             if not args.disable_render:
                 env.render()
             video_recorder.capture_frame()
+            if args.delay:
+                time.sleep(args.delay)
 
         if reward is None:
             raise RuntimeError("Reward is None. This should not happen")
@@ -253,6 +258,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-d", "--disable-render", action="store_true", help="Disable cv2 rendering"
+    )
+    parser.add_argument(
+        "--delay",
+        default=0.0,
+        type=float,
+        help="Delay between steps in simulation. For visualization purposes "
+        "- note: it doesn't get reflected in the video",
     )
     parser.add_argument(
         "-o",

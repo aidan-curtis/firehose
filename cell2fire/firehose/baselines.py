@@ -62,7 +62,10 @@ class HumanInputAlgorithm(FlatActionSpaceAlgorithm):
 class NaiveAlgorithm(FlatActionSpaceAlgorithm):
     """
     The Naive algorithm selects the cell that is on fire that is closest to the
-    ignition point in terms of Euclidean distance.
+    ignition point in terms of Euclidean distance if use_min is True.
+
+    If use_min is False, then we select the point furthest from the ignition.
+    This is our Frontier baseline essentially.
 
     If cells have already been put out, then it will not consider them.
     If there are no cells on fire, then it will return -1 (no-op).
@@ -77,9 +80,10 @@ class NaiveAlgorithm(FlatActionSpaceAlgorithm):
         self.prev_actions: Set[int] = {-1}
         self.ignition_point = self.env.ignition_points.points[0]
         self.ignition_point_yx = self.env.flatten_idx_to_yx[self.ignition_point.idx - 1]
+        self.use_min = True
 
     def _update_ignition_point(self):
-        """ Update ignition point if it has changed, indicating a reset in the environment """
+        """Update ignition point if it has changed, indicating a reset in the environment"""
         current_ignition_point = self.env.ignition_points.points[0]
 
         if current_ignition_point != self.ignition_point:
@@ -113,8 +117,13 @@ class NaiveAlgorithm(FlatActionSpaceAlgorithm):
             # No cells on fire so no-op
             return -1, None
 
-        # Choose closest cell on fire
-        closest_idx = np.argmin(dist)
+        if self.use_min:
+            # Choose closest cell on fire
+            closest_idx = np.argmin(dist)
+        else:
+            # Choose furthest cell on fire
+            closest_idx = np.argmax(dist)
+
         chosen_fire_yx = fire_yx[closest_idx]
         chosen_fire_idx = self.env.yx_to_flatten_idx[chosen_fire_yx]
 
@@ -134,3 +143,9 @@ class NaiveAlgorithm(FlatActionSpaceAlgorithm):
 
         self.prev_actions.add(chosen_fire_idx)
         return chosen_fire_idx, None
+
+
+class HumanExpertAlgorithm(NaiveAlgorithm):
+    def __init__(self, env: FireEnv):
+        super().__init__(env)
+        self.use_min = False
