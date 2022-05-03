@@ -249,7 +249,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-r",
         "--reward",
-        default="WillShenReward",
+        default="FireSizeReward",
         help="Specifies the reward function to use",
         choices=set(REWARD_FUNCTIONS.keys()),
     )
