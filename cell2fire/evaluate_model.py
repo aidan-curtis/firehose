@@ -124,7 +124,7 @@ def main(args):
     # Get the model for the algorithm and setup video recorder
     model = _get_model(algo=args.algo, model_path=args.model_path, env=env)
     video_recorder = FirehoseVideoRecorder(
-        env, algo=args.algo, disable_video=args.disable_video
+        env, args=args, disable_video=args.disable_video
     )
 
     # Override observation type if required - this is for maskable PPO mostly
