@@ -50,3 +50,4 @@ stable-baselines3-contrib
 *.gif
 slurm*.out
 
+*monitor.csv
