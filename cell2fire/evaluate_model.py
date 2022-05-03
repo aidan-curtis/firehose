@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import time
 from typing import Optional
 
 from generate_ignition_points import load_ignition_points
@@ -10,6 +11,7 @@ from stable_baselines3 import A2C, DQN, PPO
 
 from cell2fire.gym_env import FireEnv
 from firehose.baselines import (
+    HumanExpertAlgorithm,
     HumanInputAlgorithm,
     NaiveAlgorithm,
     NoAlgorithm,
@@ -17,6 +19,7 @@ from firehose.baselines import (
 )
 from firehose.helpers import IgnitionPoint, IgnitionPoints
 from firehose.results import FirehoseResults
+from firehose.rewards import REWARD_FUNCTIONS
 from firehose.video_recorder import FirehoseVideoRecorder
 import numpy as np
 
@@ -51,6 +54,7 @@ NO_MODEL_ALGO_TO_CLASS = {
     "random": RandomAlgorithm,
     "naive": NaiveAlgorithm,
     "human": HumanInputAlgorithm,
+    "expert": HumanExpertAlgorithm,
     "none": NoAlgorithm,
 }
 
@@ -122,7 +126,7 @@ def main(args):
     # Get the model for the algorithm and setup video recorder
     model = _get_model(algo=args.algo, model_path=args.model_path, env=env)
     video_recorder = FirehoseVideoRecorder(
-        env, algo=args.algo, disable_video=args.disable_video
+        env, args=args, disable_video=args.disable_video
     )
 
     # Override observation type if required - this is for maskable PPO mostly
@@ -174,6 +178,8 @@ def main(args):
             if not args.disable_render:
                 env.render()
             video_recorder.capture_frame()
+            if args.delay:
+                time.sleep(args.delay)
 
         if reward is None:
             raise RuntimeError("Reward is None. This should not happen")
@@ -247,20 +253,34 @@ if __name__ == "__main__":
         "-acd", "--action_diameter", default=1, type=int, help="Action diameter"
     )
     parser.add_argument(
+        "-i",
+        "--ignition_type",
+        default="random",
+        help="Specifies whether to use a random or fixed fire ignition point."
+        "Choices: fixed, random, or specify path to a ignition point JSON file",
+    )
+    parser.add_argument(
+        "-r",
+        "--reward",
+        default="FireSizeReward",
+        help="Specifies the reward function to use",
+        choices=set(REWARD_FUNCTIONS.keys()),
+    )
+    parser.add_argument(
         "--disable-video", action="store_true", help="Disable video recording"
     )
     parser.add_argument(
         "-d", "--disable-render", action="store_true", help="Disable cv2 rendering"
     )
     parser.add_argument(
-        "-pr", "--parallel-record", action="store_true", help="Disable cv2 rendering"
+        "--delay",
+        default=0.0,
+        type=float,
+        help="Delay between steps in simulation. For visualization purposes "
+        "- note: it doesn't get reflected in the video",
     )
     parser.add_argument(
-        "-i",
-        "--ignition_type",
-        default="random",
-        help="Specifies whether to use a random or fixed fire ignition point."
-        "Choices: fixed, random, or specify path to a ignition point JSON file",
+        "-pr", "--parallel-record", action="store_true", help="Disable cv2 rendering"
     )
     parser.add_argument(
         "-o",

@@ -47,3 +47,6 @@ train_args.json
 *-ignition-points.json
 
 stable-baselines3-contrib
+*.gif
+slurm*.out
+

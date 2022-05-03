@@ -8,7 +8,7 @@ from gym_env import FireEnv
 class FirehoseVideoRecorder:
     """Wrapper around gym VideoRecorder to record firehose environment."""
 
-    def __init__(self, env: FireEnv, algo: str, disable_video: bool = False):
+    def __init__(self, env: FireEnv, args, disable_video: bool = False):
         if disable_video:
             self.video_recorder = None
         else:
@@ -17,7 +17,7 @@ class FirehoseVideoRecorder:
             if not os.path.exists("videos"):
                 os.mkdir("videos")
 
-            video_fname = f"videos/{algo}-{date_str}.mp4"
+            video_fname = f"videos/{args.algo}-{args.map}-{date_str}.mp4"
             self.video_recorder = VideoRecorder(env, video_fname, enabled=True)
 
     def capture_frame(self):

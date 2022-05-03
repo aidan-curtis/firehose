@@ -101,7 +101,7 @@ class ExperimentHelper:
 
     @cached_property
     def reward_data(self) -> np.ndarray:
-        if(exists(self.reward_datafile)):
+        if exists(self.reward_datafile):
             return np.loadtxt(self.reward_datafile, skiprows=6)
         else:
             return None
@@ -167,7 +167,7 @@ class ExperimentHelper:
         print(f"Copied modified input data folder to {tmp_dir}")
 
     def overwrite_ignition_points(self, ignition_points: IgnitionPoints):
-        """ Overwrite ignition points CSV file """
+        """Overwrite ignition points CSV file"""
         tmp_dir = self.tmp_input_folder
         ignition_points_csv = os.path.join(tmp_dir, IgnitionPoints.CSV_NAME)
         # Only remove ignitions if it already exists
@@ -221,3 +221,9 @@ class ExperimentHelper:
         )
         # print("Sampled ignition points:", ignition_points)
         return ignition_points
+
+    def teardown(self):
+        """Delete temporary input folder"""
+        if self.tmp_input_folder:
+            shutil.rmtree(self.tmp_input_folder)
+            print(f"Deleted {self.tmp_input_folder}")

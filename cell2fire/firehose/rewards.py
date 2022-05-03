@@ -51,14 +51,26 @@ class WillShenReward(Reward):
     def name(cls) -> str:
         return "WillShenReward"
 
-    def __call__(self, scale: float = 10, action: int = -1, **kwargs) -> float:
-        assert self.env.state.shape == self.env.forest_image.shape[:2]
-
+    def __call__(
+        self,
+        fire_scale: float = 10,
+        dist_scale: float = 0.05,
+        action: int = -1,
+        run_asserts: bool = False,
+        **kwargs
+    ) -> float:
         fire_idxs = np.array(np.where(self.env.state > 0)).T
         num_cells_on_fire = fire_idxs.shape[0] if fire_idxs.size != 0 else 0
 
-        # Proportion of cells on fire
-        fire_term = 1 - num_cells_on_fire / self.env.num_cells
+        # -(num cells on fire) / (total num cells in forest) * scale
+        fire_term = -num_cells_on_fire / self.env.num_cells * fire_scale
+
+        # Some sanity checks
+        if run_asserts:
+            assert self.env.state.shape == self.env.forest_image.shape[:2]
+            assert fire_idxs.shape[1] == 2
+            fire_reward = FireSizeReward(self.env)
+            assert fire_term == fire_reward()
 
         # Hack that will suffice for 2x2 and 3x3
         if isinstance(action, list):
@@ -81,9 +93,10 @@ class WillShenReward(Reward):
 
         # Penalize actions far away from fire
         action_dist_term = min_dist_to_fire / self.env.max_dist
+        scaled_action_dist_term = action_dist_term * dist_scale
 
         # % of cells on fire - min dist to fire / scale
-        reward = fire_term - action_dist_term / scale
+        reward = fire_term - scaled_action_dist_term
         return reward
 
 
