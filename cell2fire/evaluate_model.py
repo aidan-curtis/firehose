@@ -107,7 +107,7 @@ def main(args):
         action_type=args.action_space,
         fire_map=args.map,
         output_dir=outdir,
-        max_steps=500,
+        max_steps=2000,
         ignition_points=(
             MAP_TO_IGNITION_POINTS.get(args.map, None)
             if args.ignition_type == "fixed"
