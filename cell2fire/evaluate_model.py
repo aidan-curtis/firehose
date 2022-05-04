@@ -25,6 +25,7 @@ import numpy as np
 
 # Map name to ignition point and steps before simulation and steps per action
 MAP_TO_IGNITION_POINTS = {
+    "Sub20x20": IgnitionPoints(points=[IgnitionPoint(idx=372, year=1, x=11, y=18)]),
     "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])
 }
 MAP_TO_EXTRA_KWARGS = {
