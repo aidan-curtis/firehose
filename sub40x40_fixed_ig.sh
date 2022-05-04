@@ -6,7 +6,7 @@ i=1
 # PPO Maskable with Action Diameter of 2
 for algo in "ppo-maskable"
 do
-	for map in "Sub20x20" #"Harvest40x40" "Sub40x40"
+	for map in "Sub40x40" #"Harvest40x40" "Sub40x40"
 	do
 		for ignition_type in "fixed" # "fixed"
 		do
@@ -19,7 +19,7 @@ do
 						for seed in "1" "2" "3" # 3 seeds
 						do
               if [ $((i)) -eq  $((SLURM_ARRAY_TASK_ID + 0)) ]; then
-								python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_diameter="$action_diameter" --seed=$seed --architecture="$architecture" --gamma="$gamma" --num-processes=48 --tf_logdir=/home/gridsan/wshen/firehosetmp-sub20x20-fixed-ig
+								python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_diameter="$action_diameter" --seed=$seed --architecture="$architecture" --gamma="$gamma" --num-processes=48 --tf_logdir=/home/gridsan/wshen/firehosetmp-sub40x40-fixed-ig
 							fi
 							i=$((i+1))
             done

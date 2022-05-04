@@ -26,7 +26,12 @@ import numpy as np
 # Map name to ignition point and steps before simulation and steps per action
 MAP_TO_IGNITION_POINTS = {
     "Sub20x20": IgnitionPoints(points=[IgnitionPoint(idx=372, year=1, x=11, y=18)]),
-    "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1503, year=1, x=22, y=37)])
+    # Upper-right Corner - not great for visualization but still spreads
+    # "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=472, year=1, x=31, y=11)]),
+    # Near the crazy one but expert does ok - in between previous and next ignition point
+    "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=988, year=1, x=27, y=24)]),
+    # Spreads like crazy
+    # "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1146, year=1, x=25, y=28)])
 }
 MAP_TO_EXTRA_KWARGS = {
     # I determined these by sweeping through these parameters
@@ -114,7 +119,7 @@ def main(args):
         output_dir=outdir,
         max_steps=2000,
         ignition_points=(
-            MAP_TO_IGNITION_POINTS.get(args.map, None)
+            MAP_TO_IGNITION_POINTS[args.map]
             if args.ignition_type == "fixed"
             else None
         ),
