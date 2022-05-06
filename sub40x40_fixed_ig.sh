@@ -19,7 +19,7 @@ do
 						for seed in "1" "2" "3" # 3 seeds
 						do
               if [ $((i)) -eq  $((SLURM_ARRAY_TASK_ID + 0)) ]; then
-								python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_diameter="$action_diameter" --seed=$seed --architecture="$architecture" --gamma="$gamma" --num-processes=48 --tf_logdir=/home/gridsan/wshen/firehosetmp-sub40x40-fixed-ig
+								python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_diameter="$action_diameter" --seed=$seed --architecture="$architecture" --gamma="$gamma" --train_steps=10000000 --num-processes=48 --tf_logdir=/home/gridsan/wshen/firehosetmp-sub40x40-new-fixed-ig
 							fi
 							i=$((i+1))
             done

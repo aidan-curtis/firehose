@@ -41,9 +41,15 @@ MAP_TO_IGNITION_POINTS = {
     # Upper-right Corner - not great for visualization but still spreads
     # "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=472, year=1, x=31, y=11)]),
     # Near the crazy one but expert does ok - in between previous and next ignition point
-    "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=988, year=1, x=27, y=24)]),
+    # "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=988, year=1, x=27, y=24)]),
     # Spreads like crazy
     # "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1146, year=1, x=25, y=28)])
+    # Expert does better than naive and builds a perimeter
+    # "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=945, year=1, x=24, y=23)]),
+    # We will train on this point (expert R=-79.56, naive R=-88.41)
+    "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=909, year=1, x=28, y=22)]),
+    # Baselines do very bad
+    # "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=1408, year=1, x=7, y=35)]),
 }
 MAP_TO_EXTRA_KWARGS = {
     # I determined these by sweeping through these parameters
@@ -131,9 +137,7 @@ def main(args):
         output_dir=outdir,
         max_steps=2000,
         ignition_points=(
-            MAP_TO_IGNITION_POINTS[args.map]
-            if args.ignition_type == "fixed"
-            else None
+            MAP_TO_IGNITION_POINTS[args.map] if args.ignition_type == "fixed" else None
         ),
         action_diameter=args.action_diameter,
         # verbose=True,
