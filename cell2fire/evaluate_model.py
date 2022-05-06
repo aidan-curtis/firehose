@@ -25,7 +25,19 @@ import numpy as np
 
 # Map name to ignition point and steps before simulation and steps per action
 MAP_TO_IGNITION_POINTS = {
+    # The one we trained on
     "Sub20x20": IgnitionPoints(points=[IgnitionPoint(idx=372, year=1, x=11, y=18)]),
+    # "Sub20x20": IgnitionPoints(points=[IgnitionPoint(idx=254, year=1, x=13, y=12)]),
+    # For demo-ing our 20 million model doing good
+    # "Sub20x20": IgnitionPoints(points=[IgnitionPoint(idx=393, year=1, x=12, y=19)]),
+    # We did bad compared to others but still not too bad
+    # "Sub20x20": IgnitionPoints(points=[IgnitionPoint(idx=213, year=1, x=12, y=10)]),
+    # We did crap on this one - but naive and expert solved instantly
+    # "Sub20x20": IgnitionPoints(points=[IgnitionPoint(idx=395, year=1, x=14, y=19)]),
+    # Sneaky sneaky
+    # "Sub20x20": IgnitionPoints(points=[IgnitionPoint(idx=211, year=1, x=10, y=10)]),
+    # {'idx': 254, 'year': 1, 'x': 13, 'y': 12}
+    # "Sub20x20": IgnitionPoints(points=[IgnitionPoint(idx=372, year=1, x=11, y=18)]),
     # Upper-right Corner - not great for visualization but still spreads
     # "Sub40x40": IgnitionPoints(points=[IgnitionPoint(idx=472, year=1, x=31, y=11)]),
     # Near the crazy one but expert does ok - in between previous and next ignition point
@@ -157,20 +169,22 @@ def main(args):
         return action_
 
     # Run policy until the end of the episode
-    all_parallel_images = [ ]
+    all_parallel_images = []
     for episode_idx in range(args.num_iters):
         parallel_images = []
-        obs = env.reset()
-        if(args.parallel_record):
-            parallel_images.append(env.render(mode="rgb_array"))
-        if not args.disable_render:
-            env.render()
 
         # Our custom ignition points
         if ignition_points is not None:
             points = ignition_points[episode_idx]
-            env.ignition_points = points
             print(f"For episode {episode_idx}, using ignition points:", points)
+            obs = env.reset(ignition_points=points)
+        else:
+            obs = env.reset()
+        if args.parallel_record:
+            parallel_images.append(env.render(mode="rgb_array"))
+
+        if not args.disable_render:
+            env.render()
 
         done = False
         accum_reward = 0.0
@@ -179,7 +193,7 @@ def main(args):
             action = get_action()
             obs, reward, done, info = env.step(action)
             accum_reward += reward
-            if(args.parallel_record):
+            if args.parallel_record:
                 parallel_images.append(env.render(mode="rgb_array"))
             if not args.disable_render:
                 env.render()
@@ -192,6 +206,7 @@ def main(args):
 
         # TODO: do we need discounting?
         print(f"Episode {episode_idx + 1}/{args.num_iters}. Reward = {reward:.3f}")
+        print("Accumulated reward:", accum_reward)
         results.append(
             reward=accum_reward,
             cells_harvested=len(env.cells_harvested),
@@ -200,8 +215,8 @@ def main(args):
             sim_steps=env.iter,
             ignition_points=env.ignition_points,
         )
-        print(np.expand_dims(np.concatenate(parallel_images), axis=0).shape)
-        all_parallel_images.append(np.expand_dims(np.concatenate(parallel_images), axis=0))
+        # print(np.expand_dims(np.concatenate(parallel_images), axis=0).shape)
+        # all_parallel_images.append(np.expand_dims(np.concatenate(parallel_images), axis=0))
 
     # print(all_parallel_images)
     # print(np.concatenate(all_parallel_images, axis=0).shape)

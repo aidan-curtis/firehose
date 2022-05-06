@@ -443,7 +443,10 @@ class FireEnv(Env):
         # Reset ignition points - if random will set it to random
         old_ignition_points = self.ignition_points
 
-        if self.generate_ignition_points:
+        if "ignition_points" in kwargs:
+            # Use user-defined ignition points if required - used for evaluation
+            self.ignition_points = kwargs["ignition_points"]
+        elif self.generate_ignition_points:
             self.ignition_points = self.helper.generate_random_ignition_points(
                 num_points=self.num_ignition_points,
             )
