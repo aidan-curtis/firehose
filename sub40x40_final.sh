@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task 16
+#SBATCH --exclusive
 
 # https://supercloud.mit.edu/submitting-jobs
 #source /etc/profile
@@ -27,7 +27,7 @@ do
 						do
 							echo $i $SLURM_ARRAY_TASK_ID
 							if [ $((i)) -eq  $((SLURM_ARRAY_TASK_ID + 0)) ]; then
-								python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_diameter="$action_diameter" --seed=$seed --architecture="$architecture" --gamma="$gamma"
+								python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_diameter="$action_diameter" --seed=$seed --architecture="$architecture" --gamma="$gamma" --num-processes=48 --tf_logdir=/home/gridsan/wshen/firehosetmp-sub40x40-final
 							fi
 							i=$((i+1))
             done
