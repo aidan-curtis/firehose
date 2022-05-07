@@ -44,6 +44,17 @@ class FireSizeReward(Reward):
         return -len(fire_idxs[0]) / self.env.num_cells * scale
 
 
+class CellsBurnedReward(Reward):
+    """Number of cells burned"""
+
+    @classmethod
+    def name(cls) -> str:
+        return "CellsBurnedReward"
+
+    def __call__(self, scale: float = 10, **kwargs):
+        return -len(self.env.cells_burned) / self.env.num_cells * scale
+
+
 class WillShenReward(Reward):
     """Will Shen's reward function"""
 
@@ -54,7 +65,7 @@ class WillShenReward(Reward):
     def __call__(
         self,
         fire_scale: float = 10,
-        dist_scale: float = 0.05,
+        dist_scale: float = 0.2,
         action: int = -1,
         run_asserts: bool = False,
         **kwargs
@@ -91,6 +102,9 @@ class WillShenReward(Reward):
             )
             min_dist_to_fire = np.linalg.norm(ignition_point_yx - action_yx)
 
+        # Don't penalize unless more than 2 distance away, so we can build a perimeter.
+        min_dist_to_fire = max(0, min_dist_to_fire - 2)
+
         # Penalize actions far away from fire
         action_dist_term = min_dist_to_fire / self.env.max_dist
         scaled_action_dist_term = action_dist_term * dist_scale
@@ -101,5 +115,6 @@ class WillShenReward(Reward):
 
 
 REWARD_FUNCTIONS = {
-    reward_cls.name(): reward_cls for reward_cls in (FireSizeReward, WillShenReward)
+    reward_cls.name(): reward_cls
+    for reward_cls in (FireSizeReward, CellsBurnedReward, WillShenReward)
 }

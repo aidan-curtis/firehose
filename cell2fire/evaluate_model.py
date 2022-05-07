@@ -143,6 +143,7 @@ def main(args):
         # verbose=True,
         steps_before_sim=steps_before_sim,
         steps_per_action=steps_per_action,
+        reward_func_cls=REWARD_FUNCTIONS[args.reward],
     )
 
     # Get the model for the algorithm and setup video recorder
