@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task 16
-#SBATCH --gres=gpu:volta:1
+#SBATCH --exclusive
+
 
 i=1
 
@@ -16,16 +16,16 @@ do
 		do
 			for action_diameter in "1" #"2" #"xy"
 			do
-				for architecture in "MlpPolicy" "CnnPolicy"
+				for architecture in "CnnPolicy"
 				do
-				  for reward in "WillShenReward" "FireSizeReward"
+				  for reward in "WillShenReward"
 				  do
-            for gamma in "0.95" #"0.5"
+            for gamma in "0.9" #"0.5"
             do
-              for seed in "1"
+              for seed in "1" "2" "3"
               do
                 if [ $((i)) -eq  $((SLURM_ARRAY_TASK_ID + 0)) ]; then
-                  python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_diameter="$action_diameter" --seed=$seed --architecture="$architecture" --gamma="$gamma" --reward="$reward"
+                  python cell2fire/rl_experiment_vectorized.py --algo="$algo" --map="$map" --ignition_type="$ignition_type" --action_diameter="$action_diameter" --seed=$seed --architecture="$architecture" --gamma="$gamma" --num-processes=48 --reward="$reward" --tf_logdir=/home/gridsan/wshen/firehosetmp-sub20x20-willshenreward-final
                 fi
                 i=$((i+1))
               done
