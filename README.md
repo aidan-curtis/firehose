@@ -7,6 +7,10 @@ We are trying to put out big fires with Deep Reinforcement Learning.
 
 ![fine](./figs/giphy.gif)
 
+**Firehose** is an open-source deep reinforcement learning (DRL) framework for training and evaluating wildfire management agents in realistic environments. Firehose allows researchers to easily train and evaluate a variety of RL agents on diverse environments, extend our state/action spaces and reward functions, and design hand-crafted baselines. Firehose is driven in the backend by [Cell2Fire](https://github.com/cell2fire/), a state-of-the-art wildfire simulator.
+
+You can find the majority of the code for Firehose in the `cell2fire/firehose` module, `cell2fire/evaluate_model.py` script and `cell2fire/rl_experiment_vectorized.py` script.
+
 ## Installation
 Use a virtual environment it'll make your life easier
 
