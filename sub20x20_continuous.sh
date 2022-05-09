@@ -8,7 +8,7 @@ for algo in "ppo"
 do
 	for map in "Sub20x20" #"Harvest40x40" "Sub40x40"
 	do
-		for ignition_type in "fixed" # "fixed"
+		for ignition_type in "random" # "fixed"
 		do
 			for action_diameter in "1" #"2" #"xy"
 			do
