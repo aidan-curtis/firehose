@@ -4,7 +4,7 @@
 i=1
 
 # PPO Maskable with Action Diameter of 2
-for algo in "ppo-maskable"
+for algo in "ppo"
 do
 	for map in "Sub20x20" #"Harvest40x40" "Sub40x40"
 	do
