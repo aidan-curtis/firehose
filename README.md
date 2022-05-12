@@ -12,13 +12,22 @@ Check out our project paper here: https://williamshen-nz.github.io/firehose/fire
 ![fine](./figs/giphy.gif)
 
 **Firehose** is an open-source deep reinforcement learning (DRL) framework for training and evaluating wildfire management agents in realistic environments. Firehose allows researchers to easily train and evaluate a variety of RL agents on diverse environments, extend our state/action spaces and reward functions, and design hand-crafted baselines. Firehose is driven in the backend by [Cell2Fire](https://github.com/cell2fire/), a state-of-the-art wildfire simulator.
+We have only kept the essentially Cell2Fire code in this repo to make it less cluttered.
 
 You can find the majority of the code for Firehose in the `cell2fire/firehose` module, `cell2fire/evaluate_model.py` script and `cell2fire/rl_experiment_vectorized.py` script.
+The `.ipynb` notebooks were used to check results, generate videos, etc.
+
+### Example RL Agent
+![firehose](./figs/example.gif)
+
+- Left = Min-L2 Baseline
+- Middle = Max-L2 Baseline
+- Right = RL Agent
 
 ## Installation
 Use a virtual environment it'll make your life easier
 
-1. Download Eigen and store it somewhere you like: http://eigen.tuxfamily.org/index.php?title=Main_Page#Download
+1. Download Eigen and store it somewhere you like if you don't already have it: http://eigen.tuxfamily.org/index.php?title=Main_Page#Download
    - If you already have it on your machine just locate it and note down the path.
 2. Compile and setup cell2fire
    1. `cd Cell2Fire/cell2fire/Cell2FireC`
@@ -28,7 +37,29 @@ Use a virtual environment it'll make your life easier
    5. `cd ../ && pip install -r requirements.txt` (yes repeat it twice to go up directory)
 3. Yay! Follow instructions below to run the environment and train an agent.
 
-## Supercloud Installation
+## Usage
+### Run the gym env
+```
+python cell2fire/gym_env.py
+```
+
+### Evaluate the naive policy
+This writes a video to a `videos/` folder that will be created
+```
+python cell2fire/evaluate_model.py --algo naive
+```
+
+### Train RL agents parallelized
+Look at the script for the CLI args or run it with the `--help` flag
+
+```
+python cell2fire/rl_experiment_vectorized.py
+```
+
+
+## Miscellaneous
+
+### Supercloud Installation
 TLDR: just run the commands below once you have ssh'ed into Supercloud
 
 ```bash
@@ -62,26 +93,10 @@ Command to check it is all working: `python cell2fire/evaluate_model.py --disabl
 6. To run the experients, run `sbatch --array=1-10 deploy_experiments.sh` to run a batch of 10 experiments
 
 
+### Videos
+The `cell2fire/videos/video_editor.ipynb` notebook has examples on using movie-py to edit videos instead
+of using ffmpeg through the command line.
 
-## Run the gym env
-```
-python cell2fire/gym_env.py
-```
-
-## Evaluate the naive policy
-This writes a video to a `videos/` folder that will be created
-```
-python cell2fire/evaluate_model.py --algo naive
-```
-
-## Train RL agents parallelized
-Look at the script for the CLI args or run it with the `--help` flag
-
-```
-python cell2fire/rl_experiment_vectorized.py
-```
-
-### Random
 Stack 2 videos side by side
 
 ```
