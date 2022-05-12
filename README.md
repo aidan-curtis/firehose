@@ -38,6 +38,9 @@ Use a virtual environment it'll make your life easier
 3. Yay! Follow instructions below to run the environment and train an agent.
 
 ## Usage
+Some pretrained models are provided in the `pretrained_models/` directory. 
+Use the `evaluate_model.py` script to evaluate them.
+
 ### Run the gym env
 ```
 python cell2fire/gym_env.py
