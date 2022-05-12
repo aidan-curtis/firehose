@@ -18,7 +18,7 @@ You can find the majority of the code for Firehose in the `cell2fire/firehose` m
 The `.ipynb` notebooks were used to check results, generate videos, etc.
 
 ### Example RL Agent
-![firehose](./figs/example.gif)
+![firehose](./figs/firehose.gif)
 
 - Left = Min-L2 Baseline
 - Middle = Max-L2 Baseline
